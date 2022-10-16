@@ -320,6 +320,7 @@ enum {
   EM_VE = 251,            // NEC SX-Aurora VE
   EM_CSKY = 252,          // C-SKY 32-bit processor
   EM_LOONGARCH = 258,     // LoongArch
+  EM_ICMC = 512,          // ICMC architecture
 };
 
 // Object file classes.
@@ -651,6 +652,10 @@ enum {
 // ELF Relocation types for Hexagon
 enum {
 #include "ELFRelocs/Hexagon.def"
+};
+
+enum {
+#include "ELFRelocs/ICMC.def"
 };
 
 // ELF Relocation type for Lanai.

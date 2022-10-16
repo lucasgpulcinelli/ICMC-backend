@@ -41,6 +41,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
   case hexagon:        return "hexagon";
   case hsail64:        return "hsail64";
   case hsail:          return "hsail";
+  case icmc:           return "icmc";
   case kalimba:        return "kalimba";
   case lanai:          return "lanai";
   case le32:           return "le32";
@@ -119,6 +120,8 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case mips64el:    return "mips";
 
   case hexagon:     return "hexagon";
+
+  case icmc:        return "icmc";
 
   case amdgcn:      return "amdgcn";
   case r600:        return "r600";
@@ -334,6 +337,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
     .Case("riscv32", riscv32)
     .Case("riscv64", riscv64)
     .Case("hexagon", hexagon)
+    .Case("icmc", icmc)
     .Case("sparc", sparc)
     .Case("sparcel", sparcel)
     .Case("sparcv9", sparcv9)
@@ -478,6 +482,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
     .Case("riscv32", Triple::riscv32)
     .Case("riscv64", Triple::riscv64)
     .Case("hexagon", Triple::hexagon)
+    .Case("icmc", Triple::icmc)
     .Cases("s390x", "systemz", Triple::systemz)
     .Case("sparc", Triple::sparc)
     .Case("sparcel", Triple::sparcel)
@@ -803,6 +808,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::hexagon:
   case Triple::hsail64:
   case Triple::hsail:
+  case Triple::icmc:
   case Triple::kalimba:
   case Triple::lanai:
   case Triple::le32:
@@ -1375,6 +1381,7 @@ static unsigned getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
 
   case llvm::Triple::avr:
   case llvm::Triple::msp430:
+  case llvm::Triple::icmc:
     return 16;
 
   case llvm::Triple::aarch64_32:
@@ -1461,6 +1468,7 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::avr:
   case Triple::bpfeb:
   case Triple::bpfel:
+  case Triple::icmc:
   case Triple::msp430:
   case Triple::systemz:
   case Triple::ve:
@@ -1541,6 +1549,7 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::csky:
   case Triple::dxil:
   case Triple::hexagon:
+  case Triple::icmc:
   case Triple::kalimba:
   case Triple::lanai:
   case Triple::m68k:
