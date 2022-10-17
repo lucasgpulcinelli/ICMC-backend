@@ -87,6 +87,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+  case ELF::EM_ICMC:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/ICMC.def"
+    default:
+      break;
+    }
+    break;
   case ELF::EM_LANAI:
     switch (Type) {
 #include "llvm/BinaryFormat/ELFRelocs/Lanai.def"
