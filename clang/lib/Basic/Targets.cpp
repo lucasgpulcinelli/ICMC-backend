@@ -22,6 +22,7 @@
 #include "Targets/CSKY.h"
 #include "Targets/DirectX.h"
 #include "Targets/Hexagon.h"
+#include "Targets/ICMC.h"
 #include "Targets/Lanai.h"
 #include "Targets/Le64.h"
 #include "Targets/M68k.h"
@@ -125,6 +126,9 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
         Triple.getEnvironment() == llvm::Triple::Musl)
       return new LinuxTargetInfo<HexagonTargetInfo>(Triple, Opts);
     return new HexagonTargetInfo(Triple, Opts);
+
+  case llvm::Triple::icmc:
+    return new ICMCTargetInfo(Triple, Opts);
 
   case llvm::Triple::lanai:
     return new LanaiTargetInfo(Triple, Opts);
