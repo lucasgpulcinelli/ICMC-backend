@@ -1,5 +1,11 @@
-add_llvm_library(LLVMRISCWDesc
-  ICMCMCAsmInfo.cpp
+add_llvm_component_library(LLVMICMCDesc
   ICMCMCTargetDesc.cpp
-  ICMCInstPrinter.cpp
+
+  LINK_COMPONENTS
+  MC
+  Support
+
+  ADD_TO_COMPONENT
+  ICMC
 )
+
