@@ -23,7 +23,8 @@ ICMCMCAsmInfo::ICMCMCAsmInfo(const Triple &TT, const MCTargetOptions &Options){
 
 static MCRegisterInfo *createICMCMCRegisterInfo(const Triple &TT) {
     MCRegisterInfo *X = new MCRegisterInfo();
-    InitICMCMCRegisterInfo(X, 0);
+    InitICMCMCRegisterInfo(X, ICMC::SP, 0, 0, ICMC::PC);
+    printf("%p\n", (void*) X);
     return X;
 }
 
