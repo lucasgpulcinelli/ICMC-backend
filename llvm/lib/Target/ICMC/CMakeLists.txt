@@ -3,6 +3,7 @@ add_llvm_component_group(ICMC)
 set(LLVM_TARGET_DEFINITIONS ICMC.td)
 
 tablegen(LLVM ICMCGenRegisterInfo.inc -gen-register-info)
+tablegen(LLVM ICMCGenInstrInfo.inc -gen-instr-info)
 
 add_public_tablegen_target(ICMCCommonTableGen)
 

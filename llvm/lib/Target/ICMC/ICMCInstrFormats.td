@@ -13,23 +13,24 @@ def InstFormatR      : InstFormat<1>;
 
 
 // base opcode map
-class RISCWOpcode<bits<7> val> {
-    bits<7> Value = val;
+class ICMCOpcode<bits<6> val> {
+    bits<6> Value = val;
 }
-def OPC_OP : RISCWOpcode<0b0110011>;
+def OPC_ADD : ICMCOpcode<0b100000>;
+def OPC_RTS : ICMCOpcode<0b000100>;
 
 
-class RWInst<dag outs, dag ins, string opcodestr, string argstr,
+class ICMCInst<dag outs, dag ins, string opcodestr, string argstr,
   list<dag> pattern, InstFormat format> : Instruction {
-    field bits<32> Inst;
-    field bits<32> SoftFail = 0;
+    field bits<16> Inst;
+    field bits<16> SoftFail = 0;
     let Size = 4;
 
-    bits<7> Opcode = 0;
+    bits<6> Opcode = 0;
 
-    let Inst{6-0} = Opcode;
+    let Inst{5-0} = Opcode;
 
-    let Namespace = "RISCW";
+    let Namespace = "ICMC";
 
     dag OutOperandList = outs;
     dag InOperandList = ins;
@@ -40,20 +41,24 @@ class RWInst<dag outs, dag ins, string opcodestr, string argstr,
 }
 
 // Instruction formats 
-class RWInstR<bits<7> funct7, bits<3> funct3, RISCWOpcode opcode, dag outs,
-  dag ins, string opcodestr, string argstr> : RWInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
-    bits<5> rs2;
-    bits<5> rs1;
-    bits<5> rd;
+class ICMCInstR<bits<1> c, ICMCOpcode opcode, dag outs,
+  dag ins, string opcodestr, string argstr> : ICMCInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+    bits<3> rs2;
+    bits<3> rs1;
+    bits<3> rd;
 
-    let Inst{31-25} = funct7;
-    let Inst{24-20} = rs2;
-    let Inst{19-15} = rs1;
-    let Inst{14-12} = funct3;
-    let Inst{11-7} = rd;
+    let Inst{15} = c;
+    let Inst{14-12} = rs2;
+    let Inst{11-9} = rs1;
+    let Inst{8-6} = rd;
     let Opcode = opcode.Value;
 }
 
+class ICMCInstRet<ICMCOpcode opcode, dag outs,
+  dag ins, string opcodestr, string argstr> : ICMCInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+
+    let Opcode = opcode.Value;
+}
 
 
 
