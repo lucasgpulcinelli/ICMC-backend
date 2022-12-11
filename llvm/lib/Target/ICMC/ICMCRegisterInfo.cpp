@@ -9,17 +9,39 @@
 
 #include "ICMCFrameLowering.h"
 
-#define GET_REGINFO_ENUM
-#define GET_REGINFO_HEADER
+#include "ICMCRegisterInfo.h"
+
 #define GET_REGINFO_TARGET_DESC
 #include "ICMCGenRegisterInfo.inc"
 
 namespace llvm {
 
-class ICMCRegisterInfo : public ICMCGenRegisterInfo {
-    const uint16_t *getCalleeSavedRegs(const MachineFunction *MF) const {
+const uint16_t *ICMCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
+    return ICMC_CSR_SaveList;
+};
 
-    };
+const uint32_t *ICMCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                   CallingConv::ID) const {
+    return ICMC_CSR_RegMask;
+};
+
+BitVector ICMCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
+    BitVector Reserved(getNumRegs());
+
+    markSuperRegs(Reserved, ICMC::SP);
+    markSuperRegs(Reserved, ICMC::PC);
+
+    return Reserved;
+};
+
+void ICMCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
+    unsigned FIOperandNum, RegScavenger *RS) const {
+
+};
+
+Register ICMCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+    return ICMC::SP;
 };
 
 }// end namespace llvm
+

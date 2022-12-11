@@ -20,3 +20,5 @@ def PC  : ICMCRegister<9, "pc", []>, DwarfRegNum<[9]>;
 def Generic : RegisterClass<"ICMC", [i16], 16, (add R0, R1, R2, R3, R4, R5, R6, R7)>;
 def Special : RegisterClass<"ICMC", [i16], 16, (add SP, PC)>;
 
+def ICMC_CSR : CalleeSavedRegs<(add R1, R2, R3, R4)>;
+
