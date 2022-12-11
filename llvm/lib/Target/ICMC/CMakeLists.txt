@@ -11,6 +11,7 @@ add_llvm_target(ICMCCodeGen
   ICMCAsmPrinter.cpp
   ICMCTargetMachine.cpp
   ICMCTargetInfo.cpp
+  ICMCRegisterInfo.cpp
 
   LINK_COMPONENTS
   AsmPrinter
