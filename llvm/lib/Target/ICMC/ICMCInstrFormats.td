@@ -1,6 +1,6 @@
 // define scheduler resources associated with def operands.
 // 32 or 64-bit integer ALU operations
-def WriteIALU       : SchedWrite;    
+def WriteIALU       : SchedWrite;
 def ReadIALU        : SchedRead;
 
 
@@ -17,6 +17,11 @@ class ICMCOpcode<bits<6> val> {
     bits<6> Value = val;
 }
 def OPC_ADD : ICMCOpcode<0b100000>;
+def OPC_SUB : ICMCOpcode<0b100001>;
+def OPC_MUL : ICMCOpcode<0b100010>;
+def OPC_AND : ICMCOpcode<0b010010>;
+def OPC_OR  : ICMCOpcode<0b010011>;
+def OPC_XOR : ICMCOpcode<0b010100>;
 def OPC_RTS : ICMCOpcode<0b000100>;
 
 
@@ -40,7 +45,7 @@ class ICMCInst<dag outs, dag ins, string opcodestr, string argstr,
     let TSFlags{4-0} = format.Value;
 }
 
-// Instruction formats 
+// Instruction formats
 class ICMCInstR<bits<1> c, ICMCOpcode opcode, dag outs,
   dag ins, string opcodestr, string argstr> : ICMCInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
     bits<3> rs2;
