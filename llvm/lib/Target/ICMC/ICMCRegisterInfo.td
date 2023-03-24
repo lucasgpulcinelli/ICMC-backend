@@ -1,6 +1,6 @@
 
-class ICMCRegister<bits<4> Enc, string n, list<string> alt = []> : Register<n> {
-  let HWEncoding{3-0} = Enc;
+class ICMCRegister<bits<3> Enc, string n, list<string> alt = []> : Register<n> {
+  let HWEncoding{2-0} = Enc;
   let AltNames = alt;
   let Namespace = "ICMC";
 }
@@ -14,11 +14,5 @@ def R5  : ICMCRegister<5, "r5", ["R5"]>, DwarfRegNum<[5]>;
 def R6  : ICMCRegister<6, "r6", ["R6"]>, DwarfRegNum<[6]>;
 def R7  : ICMCRegister<7, "r7", ["R7"]>, DwarfRegNum<[7]>;
 
-def SP  : ICMCRegister<8, "sp", []>, DwarfRegNum<[8]>;
-def PC  : ICMCRegister<9, "pc", []>, DwarfRegNum<[9]>;
-
-def Generic : RegisterClass<"ICMC", [i16], 16, (add R0, R1, R2, R3, R4, R5, R6, R7)>;
-def Special : RegisterClass<"ICMC", [i16], 16, (add SP, PC)>;
-
-def ICMC_CSR : CalleeSavedRegs<(add R1, R2, R3, R4)>;
+def GPR : RegisterClass<"ICMC", [i16], 16, (add (sequence "R%u", 0, 7))>;
 

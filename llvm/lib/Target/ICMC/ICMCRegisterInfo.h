@@ -1,24 +1,43 @@
-#define GET_REGINFO_ENUM
+#ifndef LLVM_ICMC_REGISTER_INFO_H
+#define LLVM_ICMC_REGISTER_INFO_H
+
+#include "MCTargetDesc/ICMCMCTargetDesc.h"
+#include "ICMCFrameLowering.h"
+
+#include "llvm/CodeGen/TargetRegisterInfo.h"
+
 #define GET_REGINFO_HEADER
 #include "ICMCGenRegisterInfo.inc"
 
 namespace llvm {
 
+class ICMCSubtarget;
+
 class ICMCRegisterInfo : public ICMCGenRegisterInfo {
+  const ICMCSubtarget &ST;
+
 public:
-    ICMCRegisterInfo() : ICMCGenRegisterInfo(0, ICMC::SP, 0, 0, ICMC::PC) {}
+  ICMCRegisterInfo(const ICMCSubtarget &);
 
-    const uint16_t *getCalleeSavedRegs(const MachineFunction *MF) const override;
+  const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
-    const uint32_t *getCallPreservedMask(const MachineFunction &MF,
-                                       CallingConv::ID) const override;
+  BitVector getReservedRegs(const MachineFunction &MF) const override;
 
-    BitVector getReservedRegs(const MachineFunction &MF) const override;
+  bool requiresRegisterScavenging(const MachineFunction &MF) const override;
 
-    void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
-        unsigned FIOperandNum, RegScavenger *RS = nullptr) const override;
+  bool useFPForScavengingIndex(const MachineFunction &MF) const override;
 
-    Register getFrameRegister(const MachineFunction &MF) const override;
+  void eliminateFrameIndex(MachineBasicBlock::iterator II, int SPAdj,
+                           unsigned FIOperandNum,
+                           RegScavenger *RS = nullptr) const override;
+
+  const uint32_t *getCallPreservedMask(const MachineFunction &MF,
+                                       CallingConv::ID CC) const override;
+
+  Register getFrameRegister(const MachineFunction &MF) const override;
 };
 
-}; // namespace llvm
+} //end namespace llvm
+
+#endif
+
