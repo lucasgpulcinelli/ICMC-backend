@@ -1,17 +1,33 @@
 #ifndef LLVM_ICMC_TARGET_MACHINE_H
 #define LLVM_ICMC_TARGET_MACHINE_H
 
+#include "ICMCSubtarget.h"
+
 #include "llvm/Target/TargetMachine.h"
 
-using namespace llvm;
+namespace llvm {
+
+class TargetPassConfig;
 
 class ICMCTargetMachine : public LLVMTargetMachine {
+private:
+  ICMCSubtarget Subtarget;
+
 public:
-    ICMCTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
-                      StringRef FS, const TargetOptions &Options,
-                      Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
-                      CodeGenOpt::Level OL, bool JIT);
+  ICMCTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
+                    StringRef FS, const TargetOptions &Options,
+                    Optional<Reloc::Model> RM, Optional<CodeModel::Model> CM,
+                    CodeGenOpt::Level OL, bool JIT);
+
+  const ICMCSubtarget *getSubtargetImpl() const { return &Subtarget; }
+  const ICMCSubtarget *getSubtargetImpl(const Function &) const override {
+    return &Subtarget;
+  }
+
+  TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 };
+
+} // end namespace llvm
 
 #endif
 
