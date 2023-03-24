@@ -1,9 +1,11 @@
-add_llvm_component_library(LLVMICMCDesc
+add_llvm_component_library(LLVMICMCMCTargetDesc
+  ICMCELFObjectWriter.cpp
+  ICMCAsmBackend.cpp
+  ICMCMCAsmInfo.cpp
+  ICMCTargetStreamer.cpp
+  ICMCInstrPrinter.cpp
   ICMCMCTargetDesc.cpp
 
-  LINK_COMPONENTS
-  MC
-  Support
 
   ADD_TO_COMPONENT
   ICMC
