@@ -4,17 +4,27 @@ set(LLVM_TARGET_DEFINITIONS ICMC.td)
 
 tablegen(LLVM ICMCGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM ICMCGenInstrInfo.inc -gen-instr-info)
+tablegen(LLVM ICMCGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM ICMCGenDAGISel.inc -gen-dag-isel)
+tablegen(LLVM ICMCGenAsmMatcher.inc -gen-asm-matcher)
 
 add_public_tablegen_target(ICMCCommonTableGen)
 
 
 add_llvm_target(ICMCCodeGen
-  ICMCAsmPrinter.cpp
-  ICMCTargetMachine.cpp
-  ICMCTargetInfo.cpp
+  ICMCInstrInfo.cpp
   ICMCRegisterInfo.cpp
+  ICMCAsmPrinter.cpp
+  ICMCMCInstLower.cpp
+  ICMCFrameLowering.cpp
+  ICMCISelLowering.cpp
+  ICMCSubtarget.cpp
+  ICMCTargetMachine.cpp
+  ICMCISelDAGToDAG.cpp
+
 
   LINK_COMPONENTS
+  Analysis
   AsmPrinter
   CodeGen
   Core
@@ -22,10 +32,13 @@ add_llvm_target(ICMCCodeGen
   SelectionDAG
   Support
   Target
+  TransformUtils
 
   ADD_TO_COMPONENT
   ICMC
 )
 
 add_subdirectory(MCTargetDesc)
+add_subdirectory(TargetInfo)
+add_subdirectory(AsmParser)
 
