@@ -29,6 +29,9 @@ bool ICMCAsmBackend::fixupNeedsRelaxation(
 
 bool ICMCAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
     const MCSubtargetInfo *STI) const {
-  llvm_unreachable("writeNopData not implemented");
+  assert((Count % 1) == 0 && "NOP instructions must be 1 byte");
+
+  OS.write_zeros(Count);
+  return true;
 }
 

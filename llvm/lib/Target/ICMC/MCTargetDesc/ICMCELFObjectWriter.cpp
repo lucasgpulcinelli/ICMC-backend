@@ -16,7 +16,7 @@ public:
 };
 
 ICMCELFObjectWriter::ICMCELFObjectWriter(uint8_t OSABI)
-    : MCELFObjectTargetWriter(false, OSABI, ELF::EM_AVR, true) {}
+    : MCELFObjectTargetWriter(false, OSABI, ELF::EM_ICMC, true) {}
 
 unsigned ICMCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,

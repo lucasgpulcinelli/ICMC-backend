@@ -7,6 +7,7 @@ tablegen(LLVM ICMCGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM ICMCGenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM ICMCGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM ICMCGenAsmMatcher.inc -gen-asm-matcher)
+tablegen(LLVM ICMCGenMCCodeEmitter.inc -gen-emitter)
 
 add_public_tablegen_target(ICMCCommonTableGen)
 
