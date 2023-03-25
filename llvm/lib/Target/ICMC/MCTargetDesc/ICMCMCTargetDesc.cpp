@@ -4,6 +4,7 @@
 #include "ICMCInstrPrinter.h"
 #include "TargetInfo/ICMCTargetInfo.h"
 #include "ICMCAsmBackend.h"
+#include "ICMCMCCodeEmitter.h"
 
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -69,6 +70,8 @@ MCAsmBackend *createICMCAsmBackend(const Target &T, const MCSubtargetInfo &STI,
   return new ICMCAsmBackend(STI.getTargetTriple().getOS());
 }
 
+
+
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeICMCTargetMC() {
   Target &TheICMCTarget = getTheICMCTarget();
   RegisterMCAsmInfoFn X(TheICMCTarget, createICMCMCAsmInfo);
@@ -87,5 +90,8 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeICMCTargetMC() {
                                             createTargetAsmStreamer);
 
   TargetRegistry::RegisterMCAsmBackend(TheICMCTarget, createICMCAsmBackend);
+
+  TargetRegistry::RegisterMCCodeEmitter(getTheICMCTarget(),
+                                        createICMCMCCodeEmitter);
 }
 
