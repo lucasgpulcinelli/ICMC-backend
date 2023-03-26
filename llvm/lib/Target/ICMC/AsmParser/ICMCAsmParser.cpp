@@ -22,6 +22,7 @@ class ICMCAsmParser : public MCTargetAsmParser {
   #include "ICMCGenAsmMatcher.inc"
 
   bool tryParseRegisterOperand(OperandVector &Operands);
+  bool tryParseExpression(OperandVector &Operands);
 
 public:
   ICMCAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
@@ -62,6 +63,7 @@ private:
   union {
     StringRef Token;
     unsigned Register;
+    const MCExpr *Imm;
   };
 
   SMLoc Start, End;
@@ -71,6 +73,9 @@ public:
       : Kind(k_Token), Token(Token), Start(S), End(S) {}
   ICMCOperand(unsigned Register, SMLoc const &S, SMLoc const &E)
       : Kind(k_Register), Register(Register), Start(S), End(E) {}
+  ICMCOperand(const MCExpr* Imm, SMLoc const &S, SMLoc const &E)
+      : Kind(k_Immediate), Imm(Imm), Start(S), End(E) {}
+
 
   static std::unique_ptr<ICMCOperand> CreateToken(StringRef Str, SMLoc S) {
     return std::make_unique<ICMCOperand>(Str, S);
@@ -80,6 +85,12 @@ public:
                                                SMLoc E) {
     return std::make_unique<ICMCOperand>(RegNum, S, E);
   }
+
+  static std::unique_ptr<ICMCOperand> CreateImm(const MCExpr* Imm, SMLoc S,
+                                               SMLoc E) {
+    return std::make_unique<ICMCOperand>(Imm, S, E);
+  }
+
 
   bool isToken() const override {
     return Kind == k_Token;
@@ -122,12 +133,12 @@ public:
       OS << "Register: " << getReg();
       break;
     case k_Immediate:
-      OS << "Immediate: \"" << "" << "\"";
+      OS << "Immediate: \"" << getImm() << "\"";
       break;
     case k_Memri: {
       // only manually print the size for non-negative values,
       // as the sign is inserted automatically.
-      OS << "Memri: \"" << getReg() << '+' << "" << "\"";
+      OS << "Memri: \"" << getReg() << '+' << getImm() << "\"";
       break;
     }
     }
@@ -141,10 +152,28 @@ public:
     Inst.addOperand(MCOperand::createReg(getReg()));
   }
 
+  void addImmOperands(MCInst &Inst, unsigned N) const {
+    assert(Kind == k_Immediate && "Unexpected operand kind");
+    assert(N == 1 && "Invalid number of operands!");
+
+    const MCExpr *Expr = getImm();
+    if (!Expr)
+      Inst.addOperand(MCOperand::createImm(0));
+    else if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr))
+      Inst.addOperand(MCOperand::createImm(CE->getValue()));
+    else
+      Inst.addOperand(MCOperand::createExpr(Expr));
+  }
+
   StringRef getToken() const {
     assert(Kind == k_Token && "kind of operand is not a token");
 
     return Token;
+  }
+
+  const MCExpr *getImm() const {
+    assert((Kind == k_Immediate || Kind == k_Memri) && "Invalid access!");
+    return Imm;
   }
 };
 } // end anonymous namespace.
@@ -180,9 +209,8 @@ bool ICMCAsmParser::ParseInstruction(
   while (true) {
     // parse the operand following the current token
     if (parseOperand(Operands)) {
-      SMLoc Loc = getLexer().getLoc();
       Parser.eatToEndOfStatement();
-      return Error(Loc, "unexpected token in argument list");
+      return true;
     }
 
     // if we reach the end of statement, no comma is permitted
@@ -216,12 +244,32 @@ bool ICMCAsmParser::parseOperand(OperandVector &Operands) {
 
   case AsmToken::Hash:
     // memory address or imm
-    llvm_unreachable("immediate and memory address parsing not implemented");
+    switch (getLexer().peekTok(false).getKind()) {
+    case AsmToken::Identifier:
+      llvm_unreachable("memory addresses not implemented");
+    case AsmToken::Integer:
+      Parser.Lex();
+      return tryParseExpression(Operands);
+    default:
+      return Error(Parser.getTok().getLoc(),
+                   "expected memory address or immediate");
+    }
   default:
     return Error(Parser.getTok().getLoc(), "unexpected operand token");
   }
 
   return true;
+}
+
+bool ICMCAsmParser::tryParseExpression(OperandVector &Operands) {
+  MCExpr const *Expression;
+  if (getParser().parseExpression(Expression))
+    return true;
+
+  SMLoc S = Parser.getTok().getLoc();
+  SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+  Operands.push_back(ICMCOperand::CreateImm(Expression, S, E));
+  return false;
 }
 
 bool ICMCAsmParser::tryParseRegisterOperand(OperandVector &Operands) {
