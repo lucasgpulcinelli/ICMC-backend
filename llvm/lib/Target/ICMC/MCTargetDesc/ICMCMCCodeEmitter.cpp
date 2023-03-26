@@ -25,7 +25,7 @@ void ICMCMCCodeEmitter::encodeInstruction(const MCInst &Inst, raw_ostream &OS,
 
   for (int64_t i = WordCount - 1; i >= 0; --i) {
     uint16_t Word = (BinaryOpCode >> (i * 16));
-    support::endian::write(OS, Word, support::endianness::little);
+    support::endian::write(OS, Word, support::endianness::big);
   }
 }
 

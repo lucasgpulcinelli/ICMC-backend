@@ -8,6 +8,7 @@
 
 #include "ICMC.h"
 #include "CommonArgs.h"
+#include "ToolChains/Gnu.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
@@ -20,14 +21,7 @@ using namespace llvm::opt;
 
 ICMCToolChain::ICMCToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
-    : ToolChain(D, Triple, Args) {
+    : Generic_ELF(D, Triple, Args) {
   // ProgramPaths are found via 'PATH' environment variable.
 }
 
-bool ICMCToolChain::isPICDefault() const { return true; }
-
-bool ICMCToolChain::isPICDefaultForced() const { return true; }
-
-bool ICMCToolChain::SupportsProfiling() const { return false; }
-
-bool ICMCToolChain::hasBlocksRuntime() const { return false; }

@@ -40,11 +40,11 @@ public:
                     // 16-bit natural stack alignment
                     "-S16");
     SuitableAlign = 16;
-    WCharType = SignedInt;
-    WIntType = UnsignedInt;
-    IntPtrType = SignedInt;
-    PtrDiffType = SignedInt;
-    SizeType = UnsignedInt;
+    WCharType = SignedShort;
+    WIntType = UnsignedShort;
+    IntPtrType = SignedShort;
+    PtrDiffType = SignedShort;
+    SizeType = UnsignedShort;
   }
 
   void getTargetDefines(const LangOptions &Opts,
