@@ -10,9 +10,6 @@ class ICMCSubtarget;
 class ICMCTargetMachine;
 
 class ICMCTargetLowering : public TargetLowering {
-private:
-    const ICMCSubtarget &Subtarget;
-
 public:
   explicit ICMCTargetLowering(const TargetMachine &TM,
                              const ICMCSubtarget &Subtarget);

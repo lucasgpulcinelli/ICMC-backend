@@ -14,8 +14,6 @@ class Mangler;
 class AsmPrinter;
 
 class LLVM_LIBRARY_VISIBILITY ICMCMCInstLower {
-  MCContext *Ctx;
-  AsmPrinter &Printer;
 
 public:
   ICMCMCInstLower(MCContext *C, AsmPrinter &asmprinter);

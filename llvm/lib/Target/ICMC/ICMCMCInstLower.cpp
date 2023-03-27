@@ -10,8 +10,7 @@
 
 using namespace llvm;
 
-ICMCMCInstLower::ICMCMCInstLower(MCContext *C, AsmPrinter &AsmPrinter)
-  : Ctx(C), Printer(AsmPrinter) {}
+ICMCMCInstLower::ICMCMCInstLower(MCContext *C, AsmPrinter &AsmPrinter) {}
 
 void ICMCMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   llvm_unreachable("Lower not implemented");

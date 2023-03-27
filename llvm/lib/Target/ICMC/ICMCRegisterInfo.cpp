@@ -19,7 +19,7 @@ using namespace llvm;
 #include "ICMCGenRegisterInfo.inc"
 
 ICMCRegisterInfo::ICMCRegisterInfo(const ICMCSubtarget &ST)
-    : ICMCGenRegisterInfo(ICMC::R0), ST(ST) {}
+    : ICMCGenRegisterInfo(ICMC::R0) {}
 
 
 const MCPhysReg *ICMCRegisterInfo::getCalleeSavedRegs(
