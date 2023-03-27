@@ -23,6 +23,7 @@ class ICMCAsmParser : public MCTargetAsmParser {
 
   bool tryParseRegisterOperand(OperandVector &Operands);
   bool tryParseExpression(OperandVector &Operands);
+  bool tryParseSymbolref(OperandVector &Operands);
 
 public:
   ICMCAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
@@ -240,13 +241,13 @@ bool ICMCAsmParser::parseOperand(OperandVector &Operands) {
     if (!tryParseRegisterOperand(Operands)) {
       return false;
     }
-    llvm_unreachable("label identification not implemented");
+    return tryParseSymbolref(Operands);
 
   case AsmToken::Hash:
     // memory address or imm
     switch (getLexer().peekTok(false).getKind()) {
     case AsmToken::Identifier:
-      llvm_unreachable("memory addresses not implemented");
+      return tryParseSymbolref(Operands);
     case AsmToken::Integer:
       Parser.Lex();
       return tryParseExpression(Operands);
@@ -269,6 +270,22 @@ bool ICMCAsmParser::tryParseExpression(OperandVector &Operands) {
   SMLoc S = Parser.getTok().getLoc();
   SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
   Operands.push_back(ICMCOperand::CreateImm(Expression, S, E));
+  return false;
+}
+
+bool ICMCAsmParser::tryParseSymbolref(OperandVector &Operands) {
+  StringRef Identifier;
+  if (Parser.parseIdentifier(Identifier))
+    return true;
+
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
+
+  const MCExpr *Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
+                                              getContext());
+
+  SMLoc S = Parser.getTok().getLoc();
+  SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
+  Operands.push_back(ICMCOperand::CreateImm(Res, S, E));
   return false;
 }
 

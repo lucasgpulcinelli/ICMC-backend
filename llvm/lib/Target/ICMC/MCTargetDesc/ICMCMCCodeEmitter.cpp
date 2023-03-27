@@ -6,6 +6,8 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/MC/MCFixup.h"
+
 
 using namespace llvm;
 
@@ -27,6 +29,24 @@ void ICMCMCCodeEmitter::encodeInstruction(const MCInst &Inst, raw_ostream &OS,
     uint16_t Word = (BinaryOpCode >> (i * 16));
     support::endian::write(OS, Word, support::endianness::big);
   }
+}
+
+unsigned
+ICMCMCCodeEmitter::encodeMemoryLabel(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  if (MO.isExpr()) {
+    Fixups.push_back(
+        MCFixup::create(0, MO.getExpr(), MCFixupKind(FK_Data_2), MI.getLoc()));
+    return 0;
+  }
+
+  assert(MO.isImm());
+
+  auto target = MO.getImm();
+  return target;
 }
 
 unsigned ICMCMCCodeEmitter::getMachineOpValue(

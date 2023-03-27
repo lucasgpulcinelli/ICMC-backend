@@ -3,6 +3,7 @@
 
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCValue.h"
 
 using namespace llvm;
 
@@ -14,7 +15,13 @@ ICMCAsmBackend::createObjectTargetWriter() const {
 void ICMCAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
     const MCValue &Target, MutableArrayRef<char> Data, uint64_t Value,
     bool IsResolved, const MCSubtargetInfo *STI) const {
-  llvm_unreachable("applyFixup not implemented");
+  assert(Fixup.getKind() == FK_Data_2 && "fixup not supported!");
+
+  Value = Target.getSymA()->getSymbol().getOffset() >> 1;
+  uint64_t Offset = Fixup.getOffset() + 2;
+
+  Data[Offset] = Value & 0xff00;
+  Data[Offset+1] = Value & 0xff;
 }
 
 unsigned ICMCAsmBackend::getNumFixupKinds() const {
