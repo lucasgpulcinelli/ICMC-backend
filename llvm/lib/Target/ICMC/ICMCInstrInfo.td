@@ -33,12 +33,12 @@ def POP  : ICMCPopRegistersInstr<0b000110, "pop">;
 def LOADN  : ICMCLoadStoreInstr<0b111000, (ins simm16:$imm), (outs GPR:$reg),
                                 "loadn $reg, $imm">;
 
-def LOAD   : ICMCLoadStoreInstr<0b110000, (ins simm16:$imm), (outs GPR:$reg),
-                                "load $reg, $imm">;
+def LOAD   : ICMCLoadStoreInstr<0b110000, (ins memsimm16:$imm),
+                                (outs GPR:$reg), "load $reg, $imm">;
 
 
-def STORE  : ICMCLoadStoreInstr<0b110001, (ins GPR:$reg), (outs simm16:$imm),
-                                "store $imm, $reg">;
+def STORE  : ICMCLoadStoreInstr<0b110001, (ins GPR:$reg),
+                                (outs memsimm16:$imm), "store $imm, $reg">;
 
 def LOADI  : ICMC2RegsInstr<0b111100, 0, "loadi">;
 def STOREI : ICMC2RegsInstr<0b111101, 1, "storei">;

@@ -2,7 +2,27 @@
 // operand definitions
 
 def simm16 : Operand<i16>;
+
+def memsimm16 : Operand<i16> {
+    let EncoderMethod = "encodeMemoryLabel";
+}
+
 def simm4 : Operand<i4>;
+
+// Instructions to define global variables and their values
+
+def VAR : Instruction {
+    bits<16> imm;
+    bits<0> Inst;
+
+    let Namespace = "ICMC";
+    let Size = 0;
+
+    dag InOperandList = (ins simm16:$imm);
+    dag OutOperandList = (outs);
+
+    let AsmString = "var $imm";
+}
 
 // actual Instructions definitions
 
@@ -167,9 +187,9 @@ class ICMCBranchInstr<bits<6> Opcode, bits<4> SubOpcode, string Mnemonic>
     let Inst{21-16} = 0b000000;
     let Inst{15-0} = mem;
 
-    let AsmString = Mnemonic;
+    let AsmString = Mnemonic # " $mem";
 
-    let InOperandList = (ins simm16:$mem);
+    let InOperandList = (ins memsimm16:$mem);
     let OutOperandList = (outs);
 }
 

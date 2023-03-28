@@ -20,14 +20,36 @@ void ICMCMCCodeEmitter::encodeInstruction(const MCInst &Inst, raw_ostream &OS,
   const MCInstrDesc &Desc = MCII.get(Inst.getOpcode());
 
   unsigned Size = Desc.getSize();
-  assert(Size > 0 && "Instruction size cannot be zero");
 
-  uint64_t BinaryOpCode = getBinaryCodeForInstr(Inst, Fixups, STI);
-  size_t WordCount = Size / 2;
+  //normal instruction
+  if(Size != 0){
+    size_t WordCount = Size / 2;
+    uint64_t BinaryOpCode = getBinaryCodeForInstr(Inst, Fixups, STI);
 
-  for (int64_t i = WordCount - 1; i >= 0; --i) {
-    uint16_t Word = (BinaryOpCode >> (i * 16));
-    support::endian::write(OS, Word, support::endianness::big);
+    for (int64_t i = WordCount - 1; i >= 0; --i) {
+      uint16_t Word = (BinaryOpCode >> (i * 16));
+      support::endian::write(OS, Word, support::endianness::big);
+    }
+    return;
+  }
+
+  //variable definition instructions
+  switch(Inst.getOpcode()){
+  case ICMC::VAR:
+    encodeVarDef(Inst.getOperand(0).getImm(), OS);
+    return;
+  default:
+    llvm_unreachable("invalid opcode for instruction size of zero");
+  }
+}
+
+void ICMCMCCodeEmitter::encodeVarDef(int VarSize, raw_ostream &OS) const {
+  if(VarSize <= 0){
+    llvm_unreachable("var cannot have size less than zero");
+  }
+
+  for(int i = 0; i < (VarSize+1)/2; i++){
+    support::endian::write(OS, 0, support::endianness::big);
   }
 }
 
