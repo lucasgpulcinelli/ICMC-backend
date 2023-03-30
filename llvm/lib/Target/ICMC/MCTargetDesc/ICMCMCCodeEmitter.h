@@ -22,7 +22,7 @@ public:
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
-  void encodeVarDef(int VarSize, raw_ostream &OS) const;
+  void encodeVarDef(int16_t VarSize, raw_ostream &OS) const;
 
   unsigned encodeMemoryLabel(const MCInst &MI, unsigned OpNo,
                              SmallVectorImpl<MCFixup> &Fixups,

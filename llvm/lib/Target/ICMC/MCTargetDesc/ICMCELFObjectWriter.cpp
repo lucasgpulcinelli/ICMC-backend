@@ -2,6 +2,7 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCFixup.h"
 #include <cassert>
 
 
@@ -23,7 +24,9 @@ ICMCELFObjectWriter::ICMCELFObjectWriter(uint8_t OSABI)
 unsigned ICMCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
-  assert(Fixup.getKind() == FK_Data_2 && "invalid fixup kind");
+
+  assert(Fixup.getKind() == FK_Data_2 || Fixup.getKind() == FK_SecRel_2
+         && "invalid fixup kind");
   return ELF::R_ICMC_16;
 }
 

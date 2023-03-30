@@ -2,7 +2,9 @@
 #include "ICMCRegisterInfo.h"
 #include "MCTargetDesc/ICMCMCTargetDesc.h"
 #include "TargetInfo/ICMCTargetInfo.h"
+#include "ICMCMCExpr.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
@@ -45,6 +47,8 @@ public:
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   bool parseOperand(OperandVector &Operands);
+
+  bool parseStaticOperands(OperandVector &Operands);
 
   bool ParseDirective(AsmToken DirectiveID) override;
 
@@ -207,6 +211,14 @@ bool ICMCAsmParser::ParseInstruction(
     return false;
   }
 
+  // the static instruction has a different syntax and uses ICMCMCExpr
+  if(Name == "static"){
+    if(parseStaticOperands(Operands)){
+      return true;
+    }
+    Parser.Lex();
+  }
+
   while (true) {
     // parse the operand following the current token
     if (parseOperand(Operands)) {
@@ -231,6 +243,41 @@ bool ICMCAsmParser::ParseInstruction(
 
   // parse the final end of statement token
   Parser.Lex();
+  return false;
+}
+
+bool ICMCAsmParser::parseStaticOperands(OperandVector& Operands) {
+  uint16_t Offset, SubstValue;
+
+  StringRef Identifier;
+  if (Parser.parseIdentifier(Identifier)) {
+    return Error(Parser.getTok().getLoc(), "expected Memory label");
+  }
+
+  const MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
+
+  auto Vec = std::vector<AsmToken>();
+  Vec.resize(5);
+  auto Buf = MutableArrayRef<AsmToken>(Vec);
+
+  getLexer().peekTokens(Buf);
+
+  if (Buf[0].isNot(AsmToken::Hash) ||
+      Buf[2].isNot(AsmToken::Comma)  ||
+      Buf[3].isNot(AsmToken::Hash)) {
+    return true;
+  }
+
+  Offset = Buf[1].getIntVal();
+  SubstValue = Buf[4].getIntVal();
+
+  SMLoc SMem = Parser.getTok().getLoc();
+  SMLoc EMem = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer()-1);
+
+  const ICMCMCExpr* Res = ICMCMCExpr::create(getContext(), Sym, Offset, SubstValue);
+
+  Operands.push_back(ICMCOperand::CreateImm(Res, SMem, EMem));
+
   return false;
 }
 

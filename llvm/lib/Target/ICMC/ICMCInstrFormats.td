@@ -24,6 +24,22 @@ def VAR : Instruction {
     let AsmString = "var $imm";
 }
 
+def STATIC : Instruction {
+    bits<16> mem;
+    bits<16> pos;
+    bits<16> value;
+    bits<16> Inst;
+
+    let Inst = mem;
+    let Namespace = "ICMC";
+    let Size = 0;
+
+    dag InOperandList = (ins memsimm16:$mem, simm16:$pos, simm16:$value);
+    dag OutOperandList = (outs);
+
+    let AsmString = "static $mem, $pos, $value";
+}
+
 // actual Instructions definitions
 
 class ICMCLoadStoreInstr<bits<6> Opcode, dag ins, dag outs, string Asm>

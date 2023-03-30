@@ -38,18 +38,17 @@ void ICMCMCCodeEmitter::encodeInstruction(const MCInst &Inst, raw_ostream &OS,
   case ICMC::VAR:
     encodeVarDef(Inst.getOperand(0).getImm(), OS);
     return;
+  case ICMC::STATIC:
+    getBinaryCodeForInstr(Inst, Fixups, STI);
+    return;
   default:
     llvm_unreachable("invalid opcode for instruction size of zero");
   }
 }
 
-void ICMCMCCodeEmitter::encodeVarDef(int VarSize, raw_ostream &OS) const {
-  if(VarSize <= 0){
-    llvm_unreachable("var cannot have size less than zero");
-  }
-
-  for(int i = 0; i < (VarSize+1)/2; i++){
-    support::endian::write(OS, 0, support::endianness::big);
+void ICMCMCCodeEmitter::encodeVarDef(int16_t VarSize, raw_ostream &OS) const {
+  for(int i = 0; i < VarSize; i++){
+    support::endian::write(OS, (uint16_t) 0, support::endianness::big);
   }
 }
 
@@ -59,9 +58,16 @@ ICMCMCCodeEmitter::encodeMemoryLabel(const MCInst &MI, unsigned OpNo,
                                      const MCSubtargetInfo &STI) const {
   const MCOperand &MO = MI.getOperand(OpNo);
 
+  MCFixupKind Kind;
+  if (MI.getOpcode() == ICMC::STATIC) {
+    Kind = FK_SecRel_2;
+  } else {
+    Kind = FK_Data_2;
+  }
+
   if (MO.isExpr()) {
     Fixups.push_back(
-        MCFixup::create(0, MO.getExpr(), MCFixupKind(FK_Data_2), MI.getLoc()));
+      MCFixup::create(2, MO.getExpr(), MCFixupKind(Kind), MI.getLoc()));
     return 0;
   }
 
