@@ -359,7 +359,7 @@ bool ICMCAsmParser::tryParseRegisterOperand(OperandVector &Operands) {
 }
 
 bool ICMCAsmParser::ParseDirective(AsmToken DirectiveID) {
-  llvm_unreachable("ParseDirective not implemented");
+  return true;
 }
 
 bool ICMCAsmParser::MatchAndEmitInstruction(
