@@ -294,6 +294,7 @@ bool ICMCAsmParser::parseOperand(OperandVector &Operands) {
     // memory address or imm
     switch (getLexer().peekTok(false).getKind()) {
     case AsmToken::Identifier:
+      Parser.Lex();
       return tryParseSymbolref(Operands);
     case AsmToken::Integer:
       Parser.Lex();
@@ -343,7 +344,7 @@ bool ICMCAsmParser::tryParseRegisterOperand(OperandVector &Operands) {
 
   // try to match with a register name as defined in tablegen
   StringRef Name = Parser.getTok().getString();
-  int RegNo = MatchRegisterName(Name);
+  int RegNo = MatchRegisterName(Name.lower());
 
   if (RegNo == ICMC::NoRegister) {
     // not a register token

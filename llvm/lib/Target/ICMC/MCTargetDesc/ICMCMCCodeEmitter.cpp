@@ -97,7 +97,11 @@ unsigned ICMCMCCodeEmitter::getMachineOpValue(
 unsigned ICMCMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-    llvm_unreachable("getExprOpValue not implemented");
+  assert(Expr->getKind() == MCExpr::SymbolRef && "invalid expression kind");
+
+  Fixups.push_back(MCFixup::create(2, Expr, FK_Data_2));
+
+  return 0;
 }
 
 MCCodeEmitter *llvm::createICMCMCCodeEmitter(const MCInstrInfo &MCII,
