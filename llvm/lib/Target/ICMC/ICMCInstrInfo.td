@@ -1,59 +1,88 @@
 include "ICMCInstrFormats.td"
 
-def ret : SDNode<"ICMC::RTS", SDTNone,
-        [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+def ADD  : ICMCALUInstr<0b100000, 0, "add">;
+def ADDC : ICMCALUInstr<0b100000, 1, "addc">;
+def SUB  : ICMCALUInstr<0b100001, 0, "sub">;
+def SUBC : ICMCALUInstr<0b100001, 1, "subc">;
+def MUL  : ICMCALUInstr<0b100010, 0, "mul">;
+def DIV  : ICMCALUInstr<0b100011, 0, "div">;
+def MOD  : ICMCALUInstr<0b100101, 0, "mod">;
+def AND  : ICMCALUInstr<0b010010, 0, "and">;
+def OR   : ICMCALUInstr<0b010011, 0, "or">;
+def XOR  : ICMCALUInstr<0b010100, 0, "xor">;
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class ALU <bits<1> c, ICMCOpcode op, string opcodestr>
-    : ICMCInstR<c, op, (outs Generic:$rd), (ins Generic:$rs1, Generic:$rs2),
-        opcodestr, "$rd, $rs1, $rs2">;
+def NOT : ICMC2RegsInstr<0b010101, 0, "not">;
+def CMP : ICMC2RegsInstr<0b010110, 0, "cmp">;
 
-// add instruction
-def ADD  : ALU<0b0, OPC_ADD, "add">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def INC : ICMC1RegInstr<0b100100, 0, 0, "inc">;
+def DEC : ICMC1RegInstr<0b100100, 1, 0, "dec">;
 
-// addc instruction
-def ADDC  : ALU<0b1, OPC_ADD,"addc">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
-// sub instruction
-def SUB  : ALU<0b0, OPC_SUB, "sub">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def CLEARC : ICMCNoParametersInstr<0b0010000000000000, 1, "clearc">;
+def SETC   : ICMCNoParametersInstr<0b0010001000000000, 1, "setc">;
+def HALT   : ICMCNoParametersInstr<0b0011110000000000, 1, "halt">;
+def NOP   : ICMCNoParametersInstr<0b0000000000000000, 0, "nop">;
+def BREAKP : ICMCNoParametersInstr<0b0011100000000000, 1, "breakp">;
+def RTS    : ICMCNoParametersInstr<0b0001000000000000, 1, "rts">;
 
-// subc instruction
-def SUBC  : ALU<0b1, OPC_SUB,"subc">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def PUSH : ICMCPushRegistersInstr<0b000101, "push">;
+def POP  : ICMCPopRegistersInstr<0b000110, "pop">;
 
-// mul instruction
-def MUL  : ALU<0b0, OPC_MUL,"mul">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def LOADN  : ICMCLoadStoreInstr<0b111000, (ins simm16:$imm), (outs GPR:$reg),
+                                "loadn $reg, $imm">;
 
-// and instruction
-def AND  : ALU<0b0, OPC_AND,"and">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def LOAD   : ICMCLoadStoreInstr<0b110000, (ins memsimm16:$imm),
+                                (outs GPR:$reg), "load $reg, $imm">;
 
-// or instruction
-def OR  : ALU<0b0, OPC_OR,"or">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 
-// xor instruction
-def XOR  : ALU<0b0, OPC_XOR,"xor">, Sched<[WriteIALU, ReadIALU, ReadIALU]>;
+def STORE  : ICMCLoadStoreInstr<0b110001, (ins GPR:$reg),
+                                (outs memsimm16:$imm), "store $imm, $reg">;
 
-// rts instruction
-let isBarrier = 1, isReturn = 1, isTerminator = 1 in
-class RET <string opcodestr>
-    : ICMCInstRet<OPC_RTS, (outs), (ins),
-        opcodestr, "">;
+def LOADI  : ICMC2RegsInstr<0b111100, 0, "loadi">;
+def STOREI : ICMC2RegsInstr<0b111101, 1, "storei">;
 
-def RTS  : RET<"rts">, Sched<[]>;
+def MOV : ICMC2RegsInstr<0b110011, 0, "mov">;
 
-// generic pattern classes
-class PatSPSP<SDPatternOperator OpNode, ICMCInst Inst>
-    : Pat<(OpNode Generic:$rs1, Generic:$rs2), (Inst Generic:$rs1, Generic:$rs2)>;
+def ROTL    : ICMCShiftInstr<0b100,  "rotl">;
+def ROTR    : ICMCShiftInstr<0b110, "rotr">;
 
-class PatSP<SDPatternOperator OpNode, ICMCInst Inst>
-    : Pat<(OpNode), (Inst)>;
+def SHIFTL0 : ICMCShiftInstr<0b000, "shiftl0">;
+def SHIFTL1 : ICMCShiftInstr<0b001, "shiftl1">;
+def SHIFTR0 : ICMCShiftInstr<0b010, "shiftr0">;
+def SHIFTR1 : ICMCShiftInstr<0b011, "shiftr1">;
 
-// simple operations
-def : PatSPSP<add, ADD>;
-def : PatSPSP<addc, ADDC>;
-def : PatSPSP<sub, SUB>;
-def : PatSPSP<subc, SUBC>;
-def : PatSPSP<mul, MUL>;
-def : PatSPSP<and, AND>;
-def : PatSPSP<or, OR>;
-def : PatSPSP<xor, XOR>;
-def : PatSP<ret, RTS>;
+def INCHAR  : ICMC1RegInstr <0b110101, 0, 1, "inchar">;
+def OUTCHAR : ICMC2RegsInstr<0b110010, 1, "outchar">;
+
+def JMP : ICMCJumpInstr<0b0000, "jmp">;
+def JEQ : ICMCJumpInstr<0b0001, "jeq">;
+def JNE : ICMCJumpInstr<0b0010, "jne">;
+def JZ  : ICMCJumpInstr<0b0011, "jz">;
+def JNZ : ICMCJumpInstr<0b0100, "jnz">;
+def JC  : ICMCJumpInstr<0b0101, "jc">;
+def JNC : ICMCJumpInstr<0b0110, "jnc">;
+def JGR : ICMCJumpInstr<0b0111, "jgr">;
+def JLE : ICMCJumpInstr<0b1000, "jle">;
+def JEG : ICMCJumpInstr<0b1001, "jeg">;
+def JEL : ICMCJumpInstr<0b1010, "jel">;
+def JOV : ICMCJumpInstr<0b1011, "jov">;
+def JNOV: ICMCJumpInstr<0b1100, "jnov">;
+def JN  : ICMCJumpInstr<0b1101, "jn">;
+def JDZ : ICMCJumpInstr<0b1110, "jdz">;
+
+def CALL : ICMCCallInstr<0b0000, "call">;
+def CEQ  : ICMCCallInstr<0b0001, "ceq">;
+def CNE  : ICMCCallInstr<0b0010, "cne">;
+def CZ   : ICMCCallInstr<0b0011, "cz">;
+def CNZ  : ICMCCallInstr<0b0100, "cnz">;
+def CC   : ICMCCallInstr<0b0101, "cc">;
+def CNC  : ICMCCallInstr<0b0110, "cnc">;
+def CGR  : ICMCCallInstr<0b0111, "cgr">;
+def CLE  : ICMCCallInstr<0b1000, "cle">;
+def CEG  : ICMCCallInstr<0b1001, "ceg">;
+def CEL  : ICMCCallInstr<0b1010, "cel">;
+def COV  : ICMCCallInstr<0b1011, "cov">;
+def CNOV : ICMCCallInstr<0b1100, "cnov">;
+def CN   : ICMCCallInstr<0b1101, "cn">;
+def CDZ  : ICMCCallInstr<0b1110, "cdz">;
+

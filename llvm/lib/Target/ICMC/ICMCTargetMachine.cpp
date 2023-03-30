@@ -8,7 +8,8 @@
 
 using namespace llvm;
 
-static const char* ICMCDataLayout = "e-m:e-p:16:8-i16:8-n16-S16";
+static const char* ICMCDataLayout = \
+      "e-P1-p:16:16-i8:16-i16:16-i32:16-i64:16-f32:16-f64:16-n8-a:16";
 
 ICMCTargetMachine::ICMCTargetMachine(const Target &T, const Triple &TT,
                                      StringRef CPU, StringRef FS,

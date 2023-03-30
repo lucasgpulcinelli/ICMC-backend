@@ -6,6 +6,8 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/MC/MCFixup.h"
+
 
 using namespace llvm;
 
@@ -18,15 +20,61 @@ void ICMCMCCodeEmitter::encodeInstruction(const MCInst &Inst, raw_ostream &OS,
   const MCInstrDesc &Desc = MCII.get(Inst.getOpcode());
 
   unsigned Size = Desc.getSize();
-  assert(Size > 0 && "Instruction size cannot be zero");
 
-  uint64_t BinaryOpCode = getBinaryCodeForInstr(Inst, Fixups, STI);
-  size_t WordCount = Size / 2;
+  //normal instruction
+  if(Size != 0){
+    size_t WordCount = Size / 2;
+    uint64_t BinaryOpCode = getBinaryCodeForInstr(Inst, Fixups, STI);
 
-  for (int64_t i = WordCount - 1; i >= 0; --i) {
-    uint16_t Word = (BinaryOpCode >> (i * 16));
-    support::endian::write(OS, Word, support::endianness::little);
+    for (int64_t i = WordCount - 1; i >= 0; --i) {
+      uint16_t Word = (BinaryOpCode >> (i * 16));
+      support::endian::write(OS, Word, support::endianness::big);
+    }
+    return;
   }
+
+  //variable definition instructions
+  switch(Inst.getOpcode()){
+  case ICMC::VAR:
+    encodeVarDef(Inst.getOperand(0).getImm(), OS);
+    return;
+  case ICMC::STATIC:
+    getBinaryCodeForInstr(Inst, Fixups, STI);
+    return;
+  default:
+    llvm_unreachable("invalid opcode for instruction size of zero");
+  }
+}
+
+void ICMCMCCodeEmitter::encodeVarDef(int16_t VarSize, raw_ostream &OS) const {
+  for(int i = 0; i < VarSize; i++){
+    support::endian::write(OS, (uint16_t) 0, support::endianness::big);
+  }
+}
+
+unsigned
+ICMCMCCodeEmitter::encodeMemoryLabel(const MCInst &MI, unsigned OpNo,
+                                     SmallVectorImpl<MCFixup> &Fixups,
+                                     const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+
+  MCFixupKind Kind;
+  if (MI.getOpcode() == ICMC::STATIC) {
+    Kind = FK_SecRel_2;
+  } else {
+    Kind = FK_Data_2;
+  }
+
+  if (MO.isExpr()) {
+    Fixups.push_back(
+      MCFixup::create(2, MO.getExpr(), MCFixupKind(Kind), MI.getLoc()));
+    return 0;
+  }
+
+  assert(MO.isImm());
+
+  auto target = MO.getImm();
+  return target;
 }
 
 unsigned ICMCMCCodeEmitter::getMachineOpValue(
@@ -49,7 +97,11 @@ unsigned ICMCMCCodeEmitter::getMachineOpValue(
 unsigned ICMCMCCodeEmitter::getExprOpValue(const MCExpr *Expr,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-    llvm_unreachable("getExprOpValue not implemented");
+  assert(Expr->getKind() == MCExpr::SymbolRef && "invalid expression kind");
+
+  Fixups.push_back(MCFixup::create(2, Expr, FK_Data_2));
+
+  return 0;
 }
 
 MCCodeEmitter *llvm::createICMCMCCodeEmitter(const MCInstrInfo &MCII,

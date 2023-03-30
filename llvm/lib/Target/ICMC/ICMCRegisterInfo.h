@@ -14,8 +14,6 @@ namespace llvm {
 class ICMCSubtarget;
 
 class ICMCRegisterInfo : public ICMCGenRegisterInfo {
-  const ICMCSubtarget &ST;
-
 public:
   ICMCRegisterInfo(const ICMCSubtarget &);
 

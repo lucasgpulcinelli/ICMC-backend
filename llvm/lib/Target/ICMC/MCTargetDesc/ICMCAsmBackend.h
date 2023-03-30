@@ -13,7 +13,7 @@ struct MCFixupKindInfo;
 class ICMCAsmBackend : public MCAsmBackend {
 public:
   ICMCAsmBackend(Triple::OSType OSType)
-      : MCAsmBackend(support::little), OSType(OSType) {}
+      : MCAsmBackend(support::big), OSType(OSType) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;

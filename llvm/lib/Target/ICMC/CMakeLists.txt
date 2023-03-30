@@ -13,6 +13,7 @@ add_public_tablegen_target(ICMCCommonTableGen)
 
 
 add_llvm_target(ICMCCodeGen
+  ICMCMCExpr.cpp
   ICMCInstrInfo.cpp
   ICMCRegisterInfo.cpp
   ICMCAsmPrinter.cpp

@@ -6,7 +6,7 @@ using namespace llvm;
 
 ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
                                        const ICMCSubtarget &Subtarget)
-      : TargetLowering(TM), Subtarget(Subtarget) {
+      : TargetLowering(TM) {
 
     addRegisterClass(MVT::i16, &ICMC::GPRRegClass);
 

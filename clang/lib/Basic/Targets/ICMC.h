@@ -28,23 +28,37 @@ class LLVM_LIBRARY_VISIBILITY ICMCTargetInfo : public TargetInfo {
 public:
   ICMCTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
-    resetDataLayout("e"
-                    // ELF name mangling
-                    "-m:e"
-                    // 16-bit pointers, 8-bit aligned
-                    "-p:16:8"
-                    // 16-bit integers, 8-bit aligned
-                    "-i16:8"
-                    // 16-bit native integer width i.e register are 16-bit
-                    "-n16"
-                    // 16-bit natural stack alignment
-                    "-S16");
+    resetDataLayout("e-P1-p:16:16-i8:16-i16:16-i32:16-i64:16-f32:16-f64:16-n8-a:16");
+    TLSSupported = false;
+    PointerWidth = 16;
+    PointerAlign = 16;
+    IntWidth = 16;
+    IntAlign = 16;
+    LongWidth = 32;
+    LongAlign = 16;
+    LongLongWidth = 64;
+    LongLongAlign = 16;
     SuitableAlign = 16;
-    WCharType = SignedInt;
-    WIntType = UnsignedInt;
-    IntPtrType = SignedInt;
-    PtrDiffType = SignedInt;
+    DefaultAlignForAttributeAligned = 16;
+    HalfWidth = 16;
+    HalfAlign = 16;
+    FloatWidth = 32;
+    FloatAlign = 16;
+    DoubleWidth = 32;
+    DoubleAlign = 16;
+    DoubleFormat = &llvm::APFloat::IEEEsingle();
+    LongDoubleWidth = 32;
+    LongDoubleAlign = 16;
+    LongDoubleFormat = &llvm::APFloat::IEEEsingle();
     SizeType = UnsignedInt;
+    PtrDiffType = SignedInt;
+    IntPtrType = SignedInt;
+    Char16Type = UnsignedInt;
+    WIntType = SignedInt;
+    Int16Type = SignedInt;
+    Char32Type = UnsignedLong;
+    SigAtomicType = SignedChar;
+    ProgramAddrSpace = 1;
   }
 
   void getTargetDefines(const LangOptions &Opts,

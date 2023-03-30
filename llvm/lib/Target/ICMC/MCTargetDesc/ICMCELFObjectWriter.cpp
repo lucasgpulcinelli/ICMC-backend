@@ -1,6 +1,9 @@
 #include "ICMCELFObjectWriter.h"
 
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCFixup.h"
+#include <cassert>
 
 
 namespace llvm {
@@ -21,7 +24,10 @@ ICMCELFObjectWriter::ICMCELFObjectWriter(uint8_t OSABI)
 unsigned ICMCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                           const MCFixup &Fixup,
                                           bool IsPCRel) const {
-    llvm_unreachable("getRelocType not implemented");
+
+  assert(Fixup.getKind() == FK_Data_2 || Fixup.getKind() == FK_SecRel_2
+         && "invalid fixup kind");
+  return ELF::R_ICMC_16;
 }
 
 std::unique_ptr<MCObjectTargetWriter> createICMCELFObjectWriter(uint8_t OSABI) {

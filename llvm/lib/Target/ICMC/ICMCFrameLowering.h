@@ -11,13 +11,12 @@ class ICMCSubtarget;
 class ICMCInstrInfo;
 
 class ICMCFrameLowering : public TargetFrameLowering {
-private:
-    const ICMCSubtarget &ST;
 
 public:
   ICMCFrameLowering(const ICMCSubtarget &st)
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(2), 0),
-        ST(st) {}
+      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(2), 0) {
+
+  }
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
