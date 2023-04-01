@@ -14,7 +14,7 @@ class ICMCFrameLowering : public TargetFrameLowering {
 
 public:
   ICMCFrameLowering(const ICMCSubtarget &st)
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(2), 0) {
+      : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, Align(2), 0) {
 
   }
 
@@ -25,30 +25,7 @@ public:
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS) const override;
 
-  bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
-                                 MachineBasicBlock::iterator MI,
-                                 ArrayRef<CalleeSavedInfo> CSI,
-                                 const TargetRegisterInfo *TRI) const override;
-
-  bool
-  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator MI,
-                              MutableArrayRef<CalleeSavedInfo> CSI,
-                              const TargetRegisterInfo *TRI) const override;
-
-  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
-                                           RegScavenger *RS) const override;
-
   bool hasFP(const MachineFunction &MF) const override;
-
-  MachineBasicBlock::iterator
-  eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator I) const override;
-
-  bool assignCalleeSavedSpillSlots(
-      llvm::MachineFunction &, const llvm::TargetRegisterInfo *,
-      std::vector<llvm::CalleeSavedInfo> &) const override;
-
 };
 
 } // end namespace llvm

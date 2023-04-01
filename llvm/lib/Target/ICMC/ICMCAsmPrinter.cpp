@@ -16,7 +16,7 @@ public:
   explicit ICMCAsmPrinter(TargetMachine &TM,
                           std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)),
-        MCInstLowering(&OutContext, *this) {}
+        MCInstLowering() {}
 
   StringRef getPassName() const override { return "ICMC Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;
@@ -28,7 +28,9 @@ public:
 
 
 void ICMCAsmPrinter::emitInstruction(const MachineInstr *MI) {
-    llvm_unreachable("emitInstruction not implemented");
+  MCInst I;
+  MCInstLowering.lower(MI, I);
+  EmitToStreamer(*OutStreamer, I);
 }
 
 bool ICMCAsmPrinter::runOnMachineFunction(MachineFunction &MF) {

@@ -1,6 +1,7 @@
 #include "ICMCTargetMachine.h"
 #include "TargetInfo/ICMCTargetInfo.h"
 #include "ICMCISelDAGToDAG.h"
+#include "ICMCTargetObjectFile.h"
 
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -21,6 +22,7 @@ ICMCTargetMachine::ICMCTargetMachine(const Target &T, const Triple &TT,
                           RM.value_or(Reloc::Static),
                           getEffectiveCodeModel(CM, CodeModel::Small), OL),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {
+  this->TLOF = std::make_unique<ICMCTargetObjectFile>();
   initAsmInfo();
 }
 

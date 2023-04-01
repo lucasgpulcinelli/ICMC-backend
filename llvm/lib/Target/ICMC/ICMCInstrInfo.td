@@ -23,7 +23,14 @@ def SETC   : ICMCNoParametersInstr<0b0010001000000000, 1, "setc">;
 def HALT   : ICMCNoParametersInstr<0b0011110000000000, 1, "halt">;
 def NOP   : ICMCNoParametersInstr<0b0000000000000000, 0, "nop">;
 def BREAKP : ICMCNoParametersInstr<0b0011100000000000, 1, "breakp">;
-def RTS    : ICMCNoParametersInstr<0b0001000000000000, 1, "rts">;
+
+
+def ICMCretflag : SDNode<"ICMCISD::RET_FLAG", SDTNone,
+                         [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+def RTS    : ICMCNoParametersInstr<0b0001000000000000, 1, "rts",
+                                   [(ICMCretflag)]>;
+
 
 def PUSH : ICMCPushRegistersInstr<0b000101, "push">;
 def POP  : ICMCPopRegistersInstr<0b000110, "pop">;

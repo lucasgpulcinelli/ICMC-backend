@@ -25,16 +25,12 @@ ICMCRegisterInfo::ICMCRegisterInfo(const ICMCSubtarget &ST)
 const MCPhysReg *ICMCRegisterInfo::getCalleeSavedRegs(
       const MachineFunction *MF) const {
 
-    llvm_unreachable("getCalleeSavedRegs not implemented");
+  return CSR_Normal_SaveList;
 }
 
 BitVector ICMCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
-    llvm_unreachable("getReservedRegs not implemented");
-}
-
-bool ICMCRegisterInfo::requiresRegisterScavenging(
-      const MachineFunction &MF) const {
-    llvm_unreachable("requiresRegisterScavenging not implemented");
+  BitVector Reserved(getNumRegs());
+  return Reserved; // no registers are reserved
 }
 
 bool ICMCRegisterInfo::useFPForScavengingIndex(

@@ -25,7 +25,7 @@ public:
 } // end anonymous namespace
 
 void ICMCDAGToDAGISel::Select(SDNode *N) {
-    llvm_unreachable("Select not Implemented");
+  SelectCode(N);
 }
 
 FunctionPass *llvm::createICMCISelDag(ICMCTargetMachine &TM,

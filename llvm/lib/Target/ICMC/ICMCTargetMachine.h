@@ -12,6 +12,7 @@ class TargetPassConfig;
 class ICMCTargetMachine : public LLVMTargetMachine {
 private:
   ICMCSubtarget Subtarget;
+  std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
 public:
   ICMCTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -25,6 +26,11 @@ public:
   }
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
+
+  TargetLoweringObjectFile *getObjFileLowering() const override {
+    return this->TLOF.get();
+  }
+
 };
 
 } // end namespace llvm

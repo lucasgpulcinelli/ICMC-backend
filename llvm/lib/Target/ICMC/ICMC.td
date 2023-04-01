@@ -2,6 +2,7 @@ include "llvm/Target/Target.td"
 
 include "ICMCRegisterInfo.td"
 include "ICMCInstrInfo.td"
+include "ICMCCallingConv.td"
 
 
 def ICMCInstrInfo : InstrInfo;

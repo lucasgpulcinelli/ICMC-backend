@@ -5,6 +5,7 @@ set(LLVM_TARGET_DEFINITIONS ICMC.td)
 tablegen(LLVM ICMCGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM ICMCGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM ICMCGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM ICMCGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM ICMCGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM ICMCGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM ICMCGenMCCodeEmitter.inc -gen-emitter)
@@ -13,6 +14,7 @@ add_public_tablegen_target(ICMCCommonTableGen)
 
 
 add_llvm_target(ICMCCodeGen
+  ICMCTargetObjectFile.cpp
   ICMCMCExpr.cpp
   ICMCInstrInfo.cpp
   ICMCRegisterInfo.cpp

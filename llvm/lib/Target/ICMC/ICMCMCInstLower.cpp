@@ -10,11 +10,24 @@
 
 using namespace llvm;
 
-ICMCMCInstLower::ICMCMCInstLower(MCContext *C, AsmPrinter &AsmPrinter) {}
-
-void ICMCMCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
-  llvm_unreachable("Lower not implemented");
-
+void ICMCMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   OutMI.setOpcode(MI->getOpcode());
+
+  for (MachineOperand const &MO : MI->operands()) {
+    MCOperand MCOp;
+
+    switch(MO.getType()){
+    default:
+      llvm_unreachable("unknown operand type");
+    case MachineOperand::MO_Register:
+      MCOp = MCOperand::createReg(MO.getReg());
+      break;
+    case MachineOperand::MO_Immediate:
+      MCOp = MCOperand::createImm(MO.getImm());
+      break;
+    }
+
+    OutMI.addOperand(MCOp);
+  }
 }
 

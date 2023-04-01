@@ -142,7 +142,7 @@ class ICMC1RegInstr<bits<6> Opcode, bits<1> SubOpcode, bits<1> sideEffects,
 }
 
 class ICMCNoParametersInstr<bits<16> Opcode, bits<1> sideEffects,
-                            string Mnemonic> : Instruction {
+        string Mnemonic, list<dag> pattern = []> : Instruction {
 
     bits<16> Inst = Opcode;
 
@@ -150,6 +150,7 @@ class ICMCNoParametersInstr<bits<16> Opcode, bits<1> sideEffects,
     let Namespace = "ICMC";
     let Size = 2;
     let AsmString = Mnemonic;
+    let Pattern = pattern;
 
     let InOperandList = (ins);
     let OutOperandList = (outs);
