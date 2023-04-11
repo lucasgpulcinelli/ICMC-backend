@@ -24,6 +24,11 @@ public:
   explicit ICMCTargetLowering(const TargetMachine &TM,
                              const ICMCSubtarget &Subtarget);
 
+  static void analyzeArguments(const Function *F, const DataLayout *TD,
+                               const SmallVectorImpl<ISD::InputArg> &Args,
+                               SmallVectorImpl<CCValAssign> &ArgLocs,
+                               CCState &CCInfo);
+
   SDValue LowerFormalArguments(
       SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
       const SmallVectorImpl<ISD::InputArg> & Ins, const SDLoc & DL,

@@ -1,9 +1,9 @@
 
 // operand definitions
 
-def simm16 : Operand<i16>;
+def simm16 : Operand<i16>, ImmLeaf<i16, [{return isInt<16>(Imm);}]>;
 
-def memsimm16 : Operand<i16> {
+def memsimm16 : Operand<iPTR>, ImmLeaf<iPTR, [{return isInt<16>(Imm);}]> {
     let EncoderMethod = "encodeMemoryLabel";
 }
 
@@ -78,9 +78,8 @@ class ICMCShiftInstr<bits<3> SubOpcode, string Mnemonic>: Instruction {
     let AsmString = Mnemonic # " $rd, $imm";
 }
 
-class ICMCALUInstr<bits<6> Opcode, bits<1> WithCarry, string Mnemonic>
-      : Instruction {
-
+class ICMCALUInstr<bits<6> Opcode, bits<1> WithCarry, string Mnemonic,
+                   list<dag> pattern = []> : Instruction {
     bits<16> Inst;
     bits<3> rd;
     bits<3> rs1;
@@ -93,6 +92,7 @@ class ICMCALUInstr<bits<6> Opcode, bits<1> WithCarry, string Mnemonic>
     let Inst{6-4} = rs1;
     let Inst{3-1} = rs2;
     let Inst{0} = WithCarry;
+    let Pattern = pattern;
 
     dag InOperandList = (ins GPR:$rs1, GPR:$rs2);
     dag OutOperandList = (outs GPR:$rd);

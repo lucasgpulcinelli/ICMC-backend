@@ -1,6 +1,6 @@
 include "ICMCInstrFormats.td"
 
-def ADD  : ICMCALUInstr<0b100000, 0, "add">;
+def ADD  : ICMCALUInstr<0b100000, 0, "add", [(set GPR:$rd, (add GPR:$rs1, GPR:$rs2))]>;
 def ADDC : ICMCALUInstr<0b100000, 1, "addc">;
 def SUB  : ICMCALUInstr<0b100001, 0, "sub">;
 def SUBC : ICMCALUInstr<0b100001, 1, "subc">;
@@ -36,14 +36,19 @@ def PUSH : ICMCPushRegistersInstr<0b000101, "push">;
 def POP  : ICMCPopRegistersInstr<0b000110, "pop">;
 
 def LOADN  : ICMCLoadStoreInstr<0b111000, (ins simm16:$imm), (outs GPR:$reg),
-                                "loadn $reg, $imm">;
+                                "loadn $reg, $imm">{
+  let Pattern = [(set GPR:$reg, (load simm16:$imm))];
+}
+
+// Patterns for loading constants in registers
+def : Pat<(simm16:$imm), (LOADN simm16:$imm)>;
 
 def LOAD   : ICMCLoadStoreInstr<0b110000, (ins memsimm16:$imm),
                                 (outs GPR:$reg), "load $reg, $imm">;
 
 
-def STORE  : ICMCLoadStoreInstr<0b110001, (ins GPR:$reg),
-                                (outs memsimm16:$imm), "store $imm, $reg">;
+def STORE  : ICMCLoadStoreInstr<0b110001, (ins GPR:$reg, memsimm16:$imm),
+                                (outs), "store $imm, $reg">;
 
 def LOADI  : ICMC2RegsInstr<0b111100, 0, "loadi">;
 def STOREI : ICMC2RegsInstr<0b111101, 1, "storei">;

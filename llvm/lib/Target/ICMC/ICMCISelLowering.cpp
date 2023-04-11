@@ -8,6 +8,9 @@ using namespace llvm;
 
 #include "ICMCGenCallingConv.inc"
 
+static const MCPhysReg GPRRegList[] = {ICMC::R0, ICMC::R1, ICMC::R2, ICMC::R3,
+                                       ICMC::R4, ICMC::R5, ICMC::R6, ICMC::R7};
+
 ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
                                        const ICMCSubtarget &Subtarget)
       : TargetLowering(TM) {
@@ -17,6 +20,53 @@ ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
     computeRegisterProperties(Subtarget.getRegisterInfo());
 
     setOperationAction(ISD::ADD, MVT::i16, Legal);
+}
+
+void ICMCTargetLowering::analyzeArguments(
+    const Function *F, const DataLayout *TD,
+    const SmallVectorImpl<ISD::InputArg> &Args,
+    SmallVectorImpl<CCValAssign> &ArgLocs, CCState &CCInfo){
+  ArrayRef<MCPhysReg> RegList = makeArrayRef(GPRRegList);
+
+  int RegLastIdx = -1;
+  for (unsigned i = 0; i != Args.size();) {
+    MVT VT = Args[i].VT;
+
+    unsigned ArgIndex = Args[i].OrigArgIndex;
+    unsigned TotalBytes = VT.getStoreSize();
+    unsigned j = i + 1;
+    for (; j != Args.size(); ++j) {
+      if (Args[j].OrigArgIndex != ArgIndex)
+        break;
+      TotalBytes += Args[j].VT.getStoreSize();
+    }
+    // Round up to even number of bytes.
+    TotalBytes = alignTo(TotalBytes, 2);
+    // Skip zero sized arguments
+    if (TotalBytes == 0)
+      continue;
+
+    unsigned RegIdx = RegLastIdx + TotalBytes/2;
+    RegLastIdx = RegIdx;
+
+    if (RegIdx >= RegList.size()) {
+      llvm_unreachable("stack not implemented");
+    }
+    for (; i != j; ++i) {
+      MVT VT = Args[i].VT;
+
+      unsigned Reg;
+      if (VT == MVT::i16) {
+        Reg = CCInfo.AllocateReg(RegList[RegIdx]);
+      } else {
+        llvm_unreachable(
+            "calling convention can only manage i8 and i16 types");
+      }
+      assert(Reg && "register not available in calling convention");
+      CCInfo.addLoc(CCValAssign::getReg(i, VT, Reg, VT, CCValAssign::Full));
+      RegIdx -= VT.getStoreSize();
+    }
+  }
 }
 
 SDValue ICMCTargetLowering::LowerFormalArguments(
@@ -29,6 +79,9 @@ SDValue ICMCTargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
       *DAG.getContext());
+
+  analyzeArguments(&MF.getFunction(), &DAG.getDataLayout(), Ins, ArgLocs,
+                   CCInfo);
 
   SDValue ArgValue;
   for (auto &VA : ArgLocs) {
