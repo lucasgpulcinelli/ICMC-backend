@@ -33,7 +33,7 @@ def AND  : ICMCALUInstr<0b010010, "and", [(set GPR:$rd, (and GPR:$rs1, GPR:$rs2)
 def OR   : ICMCALUInstr<0b010011, "or", [(set GPR:$rd, (or GPR:$rs1, GPR:$rs2))]>;
 def XOR  : ICMCALUInstr<0b010100, "xor", [(set GPR:$rd, (xor GPR:$rs1, GPR:$rs2))]>;
 
-def NOT : ICMC2Regs16Instr<0b010101, "not">;
+def NOT : ICMC2Regs16Instr<0b010101, "not", [(set GPR:$rd, (not GPR:$rs))]>;
 def CMP : ICMC2Regs16Instr<0b010110, "cmp">;
 
 def INC : ICMC1Reg16Instr<0b100100, "inc">;
@@ -92,6 +92,50 @@ def STOREI : ICMC2Regs16Instr<0b111101, "storei"> {
 }
 
 def MOV : ICMC2Regs16Instr<0b110011, "mov">;
+def MOVGetSP : ICMC16Inst<0b110011, "mov $rd, sp", (outs GPR:$rd), (ins)> {
+  bits<3> rd;
+
+  let Uses = [SP];
+
+  let Inst{9-7} = rd;
+  let Inst{6-4} = 0;
+  let Inst{3-0} = 0b0001;
+}
+
+def MOVSetSP : ICMC16Inst<0b110011, "mov sp, $rs", (outs), (ins GPR:$rs)> {
+  bits<3> rs;
+
+  let Uses = [SP];
+
+  let Inst{9-7} = rs;
+  let Inst{6-4} = 0;
+  let Inst{3-0} = 0b0011;
+}
+
+def LOADISP : ICMCInst<"loadisp $rd, $imm", (outs GPR:$rd),
+                       (ins memuimm16:$imm),
+                       [(set GPR:$rd, (load spmem:$imm))]> {
+  bits<3> rd;
+  bits<32> imm;
+
+  let Uses = [SP];
+
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+}
+
+def STOREISP : ICMCInst<"storeisp $rs, $imm", (outs),
+                       (ins GPR:$rs, memuimm16:$imm),
+                       [(store GPR:$rs, spmem:$imm)]> {
+  bits<3> rd;
+  bits<32> imm;
+
+  let Uses = [SP];
+
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+}
+
 
 def ROTL    : ICMCShiftInstr<0b100, "rotl">;
 def ROTR    : ICMCShiftInstr<0b110, "rotr">;

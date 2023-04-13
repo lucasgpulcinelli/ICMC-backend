@@ -7,6 +7,9 @@
 
 namespace llvm {
 
+void initializeICMCExpandPseudoPass(PassRegistry &);
+FunctionPass *createICMCExpandPseudoPass();
+
 class TargetPassConfig;
 
 class ICMCTargetMachine : public LLVMTargetMachine {

@@ -38,6 +38,7 @@ public:
   }
 
   bool addInstSelector() override;
+  void addPreSched2() override;
 };
 } // namespace
 
@@ -47,10 +48,17 @@ TargetPassConfig *ICMCTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeICMCTarget(){
   RegisterTargetMachine<ICMCTargetMachine> X(getTheICMCTarget());
+
+  auto &PR = *PassRegistry::getPassRegistry();
+  initializeICMCExpandPseudoPass(PR);
 }
 
 bool ICMCPassConfig::addInstSelector() {
   addPass(createICMCISelDag(getICMCTargetMachine(), getOptLevel()));
   return false;
+}
+
+void ICMCPassConfig::addPreSched2() {
+  addPass(createICMCExpandPseudoPass());
 }
 

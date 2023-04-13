@@ -30,18 +30,25 @@ const MCPhysReg *ICMCRegisterInfo::getCalleeSavedRegs(
 
 BitVector ICMCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
-  return Reserved; // no registers are reserved
+
+  Reserved.set(ICMC::SP);
+
+  return Reserved;
 }
 
-bool ICMCRegisterInfo::useFPForScavengingIndex(
-      const MachineFunction &MF) const {
-    llvm_unreachable("useFPForScavengingIndex not implemented");
-}
 
 void ICMCRegisterInfo::eliminateFrameIndex(
       MachineBasicBlock::iterator II, int SPAdj, unsigned FIOperandNum,
       RegScavenger *RS) const {
-    llvm_unreachable("eliminateFrameIndex not implemented");
+
+  MachineInstr &MI = *II;
+  MachineBasicBlock &MBB = *MI.getParent();
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+  int Offset = MFI.getObjectOffset(FrameIndex);
+
+  MI.getOperand(FIOperandNum).ChangeToImmediate(Offset);
 }
 
 const uint32_t *ICMCRegisterInfo::getCallPreservedMask(

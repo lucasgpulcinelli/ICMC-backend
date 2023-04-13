@@ -3,11 +3,13 @@
 
 def uimm16 : Operand<i16>, ImmLeaf<i16, [{return isInt<16>(Imm);}]>;
 
+def uimm4 : Operand<i4>;
+
 def memuimm16 : Operand<iPTR>, ImmLeaf<iPTR, [{return isInt<16>(Imm);}]> {
   let EncoderMethod = "encodeMemoryLabel";
 }
 
-def uimm4 : Operand<i4>;
+def spmem : ComplexPattern<i16, 1, "SelectSPmem", [frameindex]>;
 
 // return statement flag 
 def ICMCretflag : SDNode<"ICMCISD::RET_FLAG", SDTNone,

@@ -13,5 +13,7 @@ def R5  : ICMCRegister<5, "r5">, DwarfRegNum<[5]>;
 def R6  : ICMCRegister<6, "r6">, DwarfRegNum<[6]>;
 def R7  : ICMCRegister<7, "r7">, DwarfRegNum<[7]>;
 
-def GPR : RegisterClass<"ICMC", [i16], 16, (add (sequence "R%u", 0, 7))>;
+def SP  : ICMCRegister<0, "sp">, DwarfRegNum<[8]>;
 
+def GPR   : RegisterClass<"ICMC", [i16], 16, (add (sequence "R%u", 0, 7))>;
+def GPRSP : RegisterClass<"ICMC", [i16], 16, (add SP)>;

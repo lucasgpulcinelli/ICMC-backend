@@ -28,6 +28,7 @@ void ICMCTargetLowering::analyzeArguments(
     SmallVectorImpl<CCValAssign> &ArgLocs, CCState &CCInfo){
   ArrayRef<MCPhysReg> RegList = makeArrayRef(GPRRegList);
 
+  bool UseStack = false;
   int RegLastIdx = -1;
   for (unsigned i = 0; i != Args.size();) {
     MVT VT = Args[i].VT;
@@ -50,12 +51,22 @@ void ICMCTargetLowering::analyzeArguments(
     RegLastIdx = RegIdx;
 
     if (RegIdx >= RegList.size()) {
-      llvm_unreachable("stack not implemented");
+      UseStack = true;
     }
     for (; i != j; ++i) {
       MVT VT = Args[i].VT;
 
       unsigned Reg;
+
+      if(UseStack){
+        auto* Evt = EVT(VT).getTypeForEVT(CCInfo.getContext());
+        unsigned Offset = CCInfo.AllocateStack(TD->getTypeAllocSize(Evt),
+                                               TD->getABITypeAlign(Evt));
+        CCInfo.addLoc(
+            CCValAssign::getMem(i, VT, Offset, VT, CCValAssign::Full));
+        continue;
+      }
+
       if (VT == MVT::i16) {
         Reg = CCInfo.AllocateReg(RegList[RegIdx]);
       } else {
@@ -75,6 +86,8 @@ SDValue ICMCTargetLowering::LowerFormalArguments(
     SelectionDAG & DAG, SmallVectorImpl<SDValue> & InVals) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  auto DataLayout = DAG.getDataLayout();
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
@@ -101,7 +114,18 @@ SDValue ICMCTargetLowering::LowerFormalArguments(
       InVals.push_back(ArgValue);
     } else {
       assert(VA.isMemLoc());
-      llvm_unreachable("MemLoc formal argument lowering not implemented");
+
+      EVT LocVT = VA.getLocVT();
+
+      // Create the frame index object for this incoming parameter.
+      int FI = MFI.CreateFixedObject(LocVT.getSizeInBits() / 8,
+                                     VA.getLocMemOffset(), true);
+
+      // Create the SelectionDAG nodes corresponding to a load
+      // from this parameter.
+      SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DataLayout));
+      InVals.push_back(DAG.getLoad(LocVT, DL, Chain, FIN,
+                                   MachinePointerInfo::getFixedStack(MF, FI)));
     }
   }
 

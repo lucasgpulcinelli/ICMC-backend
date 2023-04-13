@@ -1,4 +1,5 @@
 #include "ICMCFrameLowering.h"
+#include "ICMCInstrInfo.h"
 
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -20,6 +21,6 @@ void ICMCFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
 
 bool ICMCFrameLowering::hasFP(const MachineFunction &MF) const {
-  return false;
+  return true;
 }
 
