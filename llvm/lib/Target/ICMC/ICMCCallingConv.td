@@ -1,8 +1,8 @@
 
 
 def RetCC_ICMC_BUILTIN : CallingConv<[
-  CCIfType<[i16], CCAssignToReg<[R0, R1, R2, R3, R4, R5, R6, R7]>>
+  CCIfType<[i16], CCAssignToReg<[R0]>>
 ]>;
 
-def CSR_Normal : CalleeSavedRegs<(add (sequence "R%u", 1, 7))>;
+def CSR_Normal : CalleeSavedRegs<(add (sequence "R%u", 4, 7))>;
 

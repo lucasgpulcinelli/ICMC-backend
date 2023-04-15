@@ -1,5 +1,6 @@
 #include "ICMCFrameLowering.h"
 #include "ICMCInstrInfo.h"
+#include "ICMCMachineFunctionInfo.h"
 #include "ICMCSubtarget.h"
 
 #include "llvm/Support/ErrorHandling.h"
@@ -38,6 +39,9 @@ bool ICMCFrameLowering::spillCalleeSavedRegisters(
   MachineFunction &MF = *MBB.getParent();
   const ICMCSubtarget &STI = MF.getSubtarget<ICMCSubtarget>();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
+  ICMCMachineFunctionInfo *FI = MF.getInfo<ICMCMachineFunctionInfo>();
+
+  unsigned CalleeFrameSize = 0;
 
   for (const CalleeSavedInfo &I : CSI) {
     Register Reg = I.getReg();
@@ -54,7 +58,10 @@ bool ICMCFrameLowering::spillCalleeSavedRegisters(
     BuildMI(MBB, MI, DL, TII.get(ICMC::PUSH))
         .addReg(Reg, getKillRegState(IsNotLiveIn))
         .setMIFlag(MachineInstr::FrameSetup);
+    CalleeFrameSize++;
   }
+
+  FI->setCalleeSavedFrameSize(CalleeFrameSize);
 
   return true;
 }

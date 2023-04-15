@@ -8,8 +8,7 @@ using namespace llvm;
 
 #include "ICMCGenCallingConv.inc"
 
-static const MCPhysReg GPRRegList[] = {ICMC::R0, ICMC::R1, ICMC::R2, ICMC::R3,
-                                       ICMC::R4, ICMC::R5, ICMC::R6, ICMC::R7};
+static const MCPhysReg GPRRegList[] = {ICMC::R0, ICMC::R1, ICMC::R2, ICMC::R3};
 
 ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
                                        const ICMCSubtarget &Subtarget)
@@ -178,8 +177,12 @@ void ICMCTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   MachineRegisterInfo &MRI = MF->getRegInfo();
   MachineInstrBuilder MIB(*MF, MI);
 
-  for(int I = 0; I < 3; I++) {
+  if (!Node->hasAnyUseOfValue(0)) {
+    MI.getOperand(0).setIsDead(true);
+  }
+
+  for(int I = 0; I < 2; I++) {
     Register TmpReg = MRI.createVirtualRegister(&ICMC::GPRRegClass);
-    MIB.addReg(TmpReg, RegState::EarlyClobber | RegState::Define);
+    MIB.addReg(TmpReg, RegState::Define | RegState::EarlyClobber);
   }
 }

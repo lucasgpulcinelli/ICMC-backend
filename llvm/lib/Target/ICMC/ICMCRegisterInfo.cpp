@@ -1,3 +1,4 @@
+#include "ICMCMachineFunctionInfo.h"
 #include "ICMCRegisterInfo.h"
 #include "ICMCTargetMachine.h"
 
@@ -46,14 +47,13 @@ void ICMCRegisterInfo::eliminateFrameIndex(
   MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const ICMCTargetMachine &TM = (const ICMCTargetMachine &)MF.getTarget();
-  const TargetFrameLowering *TFI = TM.getSubtargetImpl()->getFrameLowering();
+  const ICMCMachineFunctionInfo *FI = MF.getInfo<ICMCMachineFunctionInfo>();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  int Offset = MFI.getObjectOffset(FrameIndex);
-  Offset += MFI.getStackSize() - TFI->getOffsetOfLocalArea();
+  int Offset = MFI.getObjectOffset(FrameIndex)/2;
+  Offset += 2 + FI->getCalleeSavedFrameSize();
 
-  MI.getOperand(FIOperandNum).ChangeToImmediate(Offset/2);
+  MI.getOperand(FIOperandNum).ChangeToImmediate(Offset);
 }
 
 const uint32_t *ICMCRegisterInfo::getCallPreservedMask(
