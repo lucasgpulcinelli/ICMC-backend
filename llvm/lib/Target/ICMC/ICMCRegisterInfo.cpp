@@ -1,4 +1,5 @@
 #include "ICMCRegisterInfo.h"
+#include "ICMCTargetMachine.h"
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -45,10 +46,14 @@ void ICMCRegisterInfo::eliminateFrameIndex(
   MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const ICMCTargetMachine &TM = (const ICMCTargetMachine &)MF.getTarget();
+  const TargetFrameLowering *TFI = TM.getSubtargetImpl()->getFrameLowering();
+
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
   int Offset = MFI.getObjectOffset(FrameIndex);
+  Offset += MFI.getStackSize() - TFI->getOffsetOfLocalArea();
 
-  MI.getOperand(FIOperandNum).ChangeToImmediate(Offset);
+  MI.getOperand(FIOperandNum).ChangeToImmediate(Offset/2);
 }
 
 const uint32_t *ICMCRegisterInfo::getCallPreservedMask(

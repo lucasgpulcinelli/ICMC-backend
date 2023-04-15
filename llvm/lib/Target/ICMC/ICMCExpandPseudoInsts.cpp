@@ -90,7 +90,7 @@ bool ICMCExpandPseudo::expandLOADISP(Block &MBB, BlockIt MBBI, MachineInstr &MI)
 
   buildMI(MBB, MBBI, ICMC::LOADN)
     .addReg(MI.getOperand(3).getReg())
-    .addImm(MI.getOperand(1).getImm()/2+2);
+    .addImm(MI.getOperand(1).getImm());
 
   buildMI(MBB, MBBI, ICMC::ADD)
     .addReg(MI.getOperand(4).getReg())
@@ -114,7 +114,7 @@ bool ICMCExpandPseudo::expandSTOREISP(Block &MBB, BlockIt MBBI,
 
   buildMI(MBB, MBBI, ICMC::LOADN)
     .addReg(MI.getOperand(3).getReg())
-    .addImm(MI.getOperand(1).getImm()/2+2);
+    .addImm(MI.getOperand(1).getImm());
 
   buildMI(MBB, MBBI, ICMC::ADD)
     .addReg(MI.getOperand(4).getReg())
