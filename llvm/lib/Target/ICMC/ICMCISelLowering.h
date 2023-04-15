@@ -38,6 +38,9 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> & Outs,
                       const SmallVectorImpl<SDValue> & OutVals,
                       const SDLoc & DL, SelectionDAG & DAG) const override;
+
+  void AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                     SDNode *Node) const override;
 };
 
 } // end namespace llvm

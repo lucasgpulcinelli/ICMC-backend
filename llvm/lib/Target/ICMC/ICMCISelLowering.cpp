@@ -167,3 +167,19 @@ SDValue ICMCTargetLowering::LowerReturn(SDValue Chain,
   return DAG.getNode(ICMCISD::RET_FLAG, DL, MVT::Other, RetOps);
 }
 
+void ICMCTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                                       SDNode *Node) const {
+  if (MI.getOpcode() != ICMC::LOADISP && MI.getOpcode() != ICMC::STOREISP) {
+    return;
+  }
+
+  DebugLoc DL = MI.getDebugLoc();
+  MachineFunction *MF = MI.getParent()->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  MachineInstrBuilder MIB(*MF, MI);
+
+  for(int I = 0; I < 3; I++) {
+    Register TmpReg = MRI.createVirtualRegister(&ICMC::GPRRegClass);
+    MIB.addReg(TmpReg, RegState::EarlyClobber | RegState::Define);
+  }
+}

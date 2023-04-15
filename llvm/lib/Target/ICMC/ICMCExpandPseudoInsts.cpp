@@ -32,8 +32,6 @@ private:
     return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Opcode));
   }
 
-  Register scavengeGPR8(MachineInstr &MI);
-
   bool expandMBB(Block &MBB);
   bool expandMI(Block &MBB, BlockIt MBBI);
 
@@ -86,49 +84,22 @@ bool ICMCExpandPseudo::expandMBB(Block &MBB) {
   return Modified;
 }
 
-Register ICMCExpandPseudo::scavengeGPR8(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  RegScavenger RS;
-
-  RS.enterBasicBlock(MBB);
-  RS.forward(MI);
-
-  BitVector Candidates =
-      TRI->getAllocatableSet(*MBB.getParent(), &ICMC::GPRRegClass);
-
-  for (MachineOperand &MO : MI.operands()) {
-    if (MO.isReg() && MO.getReg() != 0 && !MO.isDef() &&
-        !Register::isVirtualRegister(MO.getReg()))
-      Candidates.reset(MO.getReg());
-  }
-
-  BitVector Available = RS.getRegsAvailable(&ICMC::GPRRegClass);
-  Available &= Candidates;
-
-  signed Reg = Available.find_first();
-  assert(Reg != -1 && "ran out of registers");
-  return Reg;
-}
-
 bool ICMCExpandPseudo::expandLOADISP(Block &MBB, BlockIt MBBI, MachineInstr &MI){
-  Register SPTmpReg, FITmpReg, AddTmpReg;
-
-  SPTmpReg = scavengeGPR8(MI);
-  FITmpReg = scavengeGPR8(MI);
-  AddTmpReg = scavengeGPR8(MI);
-
   buildMI(MBB, MBBI, ICMC::MOVGetSP)
-    .addReg(SPTmpReg, RegState::Define);
+    .addReg(MI.getOperand(2).getReg());
+
   buildMI(MBB, MBBI, ICMC::LOADN)
-    .addReg(FITmpReg, RegState::Define)
-    .addImm(MI.getOperand(1).getImm());
+    .addReg(MI.getOperand(3).getReg())
+    .addImm(MI.getOperand(1).getImm()/2+2);
+
   buildMI(MBB, MBBI, ICMC::ADD)
-    .addReg(AddTmpReg, RegState::Define)
-    .addReg(SPTmpReg)
-    .addReg(FITmpReg);
+    .addReg(MI.getOperand(4).getReg())
+    .addReg(MI.getOperand(2).getReg())
+    .addReg(MI.getOperand(3).getReg());
+
   buildMI(MBB, MBBI, ICMC::LOADI)
     .addReg(MI.getOperand(0).getReg())
-    .addReg(AddTmpReg);
+    .addReg(MI.getOperand(4).getReg());
 
   MI.eraseFromParent();
   return true;
@@ -136,23 +107,22 @@ bool ICMCExpandPseudo::expandLOADISP(Block &MBB, BlockIt MBBI, MachineInstr &MI)
 
 bool ICMCExpandPseudo::expandSTOREISP(Block &MBB, BlockIt MBBI, 
                                       MachineInstr &MI){
-  Register SPTmpReg, FITmpReg, AddTmpReg;
-
-  SPTmpReg = scavengeGPR8(MI);
-  FITmpReg = scavengeGPR8(MI);
-  AddTmpReg = scavengeGPR8(MI);
 
   buildMI(MBB, MBBI, ICMC::MOVGetSP)
-    .addReg(SPTmpReg, RegState::Define);
+    .addReg(MI.getOperand(2).getReg());
+
+
   buildMI(MBB, MBBI, ICMC::LOADN)
-    .addReg(FITmpReg, RegState::Define)
-    .addImm(MI.getOperand(1).getImm());
+    .addReg(MI.getOperand(3).getReg())
+    .addImm(MI.getOperand(1).getImm()/2+2);
+
   buildMI(MBB, MBBI, ICMC::ADD)
-    .addReg(AddTmpReg, RegState::Define)
-    .addReg(SPTmpReg)
-    .addReg(FITmpReg);
+    .addReg(MI.getOperand(4).getReg())
+    .addReg(MI.getOperand(2).getReg())
+    .addReg(MI.getOperand(3).getReg());
+
   buildMI(MBB, MBBI, ICMC::STOREI)
-    .addReg(AddTmpReg)
+    .addReg(MI.getOperand(4).getReg())
     .addReg(MI.getOperand(0).getReg());
 
   MI.eraseFromParent();

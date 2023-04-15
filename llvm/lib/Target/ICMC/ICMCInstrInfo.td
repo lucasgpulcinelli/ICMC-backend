@@ -52,17 +52,22 @@ def BREAKP : ICMCNoParams16Instr<0b001110, "breakp">;
 
 def RTS    : ICMCNoParams16Instr<0b000100, "rts", [(ICMCretflag)]> {
   let hasSideEffects = 1;
+  let isTerminator = 1;
+  let isReturn = 1;
+  let Uses = [SP];
 }
 
 def PUSH : ICMC1Reg16Instr<0b000101, "push"> {
   dag InOperandList = (ins GPR:$reg);
   dag OutOperandList = (outs); 
 
+  let Uses = [SP];
   let mayStore = 1;
 }
 
 def POP  : ICMC1Reg16Instr<0b000110, "pop"> {
   let mayLoad = 1;
+  let Uses = [SP];
 }
 
 def LOADN  : ICMCLoadStoreInstr<0b111000, "loadn $reg, $imm", (outs GPR:$reg),
@@ -113,11 +118,12 @@ def MOVSetSP : ICMC16Inst<0b110011, "mov sp, $rs", (outs), (ins GPR:$rs)> {
 }
 
 def LOADISP : ICMCInst<"loadisp $rd, $imm", (outs GPR:$rd),
-                       (ins memuimm16:$imm),
+                       (ins memuimm16:$imm, variable_ops),
                        [(set GPR:$rd, (load spmem:$imm))]> {
   bits<3> rd;
   bits<32> imm;
 
+  let hasPostISelHook = 1;
   let Uses = [SP];
 
   let isPseudo = 1;
@@ -125,11 +131,12 @@ def LOADISP : ICMCInst<"loadisp $rd, $imm", (outs GPR:$rd),
 }
 
 def STOREISP : ICMCInst<"storeisp $rs, $imm", (outs),
-                       (ins GPR:$rs, memuimm16:$imm),
+                       (ins GPR:$rs, memuimm16:$imm, variable_ops),
                        [(store GPR:$rs, spmem:$imm)]> {
   bits<3> rd;
   bits<32> imm;
 
+  let hasPostISelHook = 1;
   let Uses = [SP];
 
   let isPseudo = 1;

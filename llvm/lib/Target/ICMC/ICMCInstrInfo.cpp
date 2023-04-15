@@ -57,8 +57,6 @@ void ICMCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         int FrameIndex,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI) const {
-  MachineFunction &MF = *MBB.getParent();
-
   DebugLoc DL;
   if (MI != MBB.end()) {
     DL = MI->getDebugLoc();

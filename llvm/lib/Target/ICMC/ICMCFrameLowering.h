@@ -26,6 +26,15 @@ public:
                             RegScavenger *RS) const override;
 
   bool hasFP(const MachineFunction &MF) const override;
+
+  bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MI,
+                                 ArrayRef<CalleeSavedInfo> CSI,
+                                 const TargetRegisterInfo *TRI) const override;
+
+  bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+      MachineBasicBlock::iterator MI, MutableArrayRef<CalleeSavedInfo> CSI,
+      const TargetRegisterInfo *TRI) const override;
 };
 
 } // end namespace llvm
