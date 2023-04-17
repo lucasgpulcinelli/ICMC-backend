@@ -3,7 +3,7 @@
 
 def uimm16 : Operand<i16>, ImmLeaf<i16, [{return isInt<16>(Imm);}]>;
 
-def uimm4 : Operand<i4>;
+def uimm4 : Operand<i4>, ImmLeaf<i4, [{return isInt<4>(Imm);}]>;
 
 def memuimm16 : Operand<iPTR>, ImmLeaf<iPTR, [{return isInt<16>(Imm);}]> {
   let EncoderMethod = "encodeMemoryLabel";
@@ -57,8 +57,9 @@ class ICMCLoadStoreInstr<bits<6> opcode, string asmStr, dag outs, dag ins,
 
 class ICMCShiftInstr<bits<3> subOpcode, string Mnemonic, 
                      list<dag> pattern = []>
-    : ICMC16Inst<0b010000, Mnemonic # " $rd, $imm", (outs GPR:$rd), 
-                 (ins uimm4:$imm), pattern> {
+    : ICMC16Inst<0b010000, Mnemonic # " $rd, $imm", (outs GPR:$rd),
+                 (ins GPR:$rs, uimm4:$imm), pattern> {
+  bits<3> rs;
   bits<3> rd;
   bits<4> imm;
 

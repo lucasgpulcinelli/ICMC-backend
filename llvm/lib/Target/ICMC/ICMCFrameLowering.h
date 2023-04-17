@@ -4,6 +4,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 class MachineFunction;
@@ -13,10 +14,8 @@ class ICMCInstrInfo;
 class ICMCFrameLowering : public TargetFrameLowering {
 
 public:
-  ICMCFrameLowering(const ICMCSubtarget &st)
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, Align(2), 0) {
-
-  }
+  ICMCFrameLowering(const ICMCSubtarget &St)
+      : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, Align(2), 0) {}
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
@@ -32,10 +31,14 @@ public:
                                  ArrayRef<CalleeSavedInfo> CSI,
                                  const TargetRegisterInfo *TRI) const override;
 
-  bool restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
-      MachineBasicBlock::iterator MI, MutableArrayRef<CalleeSavedInfo> CSI,
-      const TargetRegisterInfo *TRI) const override;
+  bool
+  restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              MutableArrayRef<CalleeSavedInfo> CSI,
+                              const TargetRegisterInfo *TRI) const override;
 };
+
+FunctionPass *createICMCFrameAnalyzerPass();
 
 } // end namespace llvm
 

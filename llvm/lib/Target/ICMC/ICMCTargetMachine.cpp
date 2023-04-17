@@ -1,7 +1,8 @@
+#include "ICMCFrameLowering.h"
 #include "ICMCTargetMachine.h"
-#include "TargetInfo/ICMCTargetInfo.h"
 #include "ICMCISelDAGToDAG.h"
 #include "ICMCTargetObjectFile.h"
+#include "TargetInfo/ICMCTargetInfo.h"
 
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -55,6 +56,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeICMCTarget(){
 
 bool ICMCPassConfig::addInstSelector() {
   addPass(createICMCISelDag(getICMCTargetMachine(), getOptLevel()));
+  addPass(createICMCFrameAnalyzerPass());
   return false;
 }
 

@@ -1,4 +1,5 @@
 #include "ICMCInstrInfo.h"
+#include "ICMCMachineFunctionInfo.h"
 
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -57,6 +58,11 @@ void ICMCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         int FrameIndex,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI) const {
+  MachineFunction &MF = *MBB.getParent();
+  ICMCMachineFunctionInfo *FI = MF.getInfo<ICMCMachineFunctionInfo>();
+
+  FI->setHasFrameIndex();
+
   DebugLoc DL;
   if (MI != MBB.end()) {
     DL = MI->getDebugLoc();

@@ -50,10 +50,14 @@ void ICMCRegisterInfo::eliminateFrameIndex(
   const ICMCMachineFunctionInfo *FI = MF.getInfo<ICMCMachineFunctionInfo>();
 
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  int Offset = MFI.getObjectOffset(FrameIndex)/2;
-  Offset += 2 + FI->getCalleeSavedFrameSize();
+  int Offset = MFI.getObjectOffset(FrameIndex);
+  if (MFI.isFixedObjectIndex(FrameIndex)) {
+    llvm_unreachable("stack arguments not implemented");
+  } else {
+    Offset -= FI->getCalleeSavedFrameSize();
+  }
 
-  MI.getOperand(FIOperandNum).ChangeToImmediate(Offset);
+  MI.getOperand(FIOperandNum).ChangeToImmediate(Offset/2+1);
 }
 
 const uint32_t *ICMCRegisterInfo::getCallPreservedMask(

@@ -14,11 +14,38 @@ ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
                                        const ICMCSubtarget &Subtarget)
       : TargetLowering(TM) {
 
-    addRegisterClass(MVT::i16, &ICMC::GPRRegClass);
+  addRegisterClass(MVT::i16, &ICMC::GPRRegClass);
 
-    computeRegisterProperties(Subtarget.getRegisterInfo());
+  computeRegisterProperties(Subtarget.getRegisterInfo());
+  setSchedulingPreference(Sched::RegPressure);
 
-    setOperationAction(ISD::ADD, MVT::i16, Legal);
+  setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
+  setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
+  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
+
+  setOperationAction(ISD::ADDC, MVT::i16, Legal);
+  setOperationAction(ISD::SUBC, MVT::i16, Legal);
+  setOperationAction(ISD::ADDE, MVT::i16, Legal);
+  setOperationAction(ISD::SUBE, MVT::i16, Legal);
+
+  setOperationAction(ISD::SRA, MVT::i4, Legal);
+  setOperationAction(ISD::SHL, MVT::i4, Legal);
+  setOperationAction(ISD::ROTL, MVT::i4, Legal);
+  setOperationAction(ISD::ROTR, MVT::i4, Legal);
+
+  setOperationAction(ISD::SRA, MVT::i16, Custom);
+  setOperationAction(ISD::SHL, MVT::i16, Custom);
+  setOperationAction(ISD::ROTL, MVT::i16, Custom);
+  setOperationAction(ISD::ROTR, MVT::i16, Custom);
+
+  setOperationAction(ISD::SDIV, MVT::i16, Expand);
+  setOperationAction(ISD::SREM, MVT::i16, Expand);
+  setOperationAction(ISD::SDIVREM, MVT::i16, Expand);
+  setOperationAction(ISD::UDIVREM, MVT::i16, Expand);
+  setOperationAction(ISD::UDIV, MVT::i16, Legal);
+  setOperationAction(ISD::UREM, MVT::i16, Legal);
+
+  setOperationAction(ISD::MUL, MVT::i16, Legal);
 }
 
 void ICMCTargetLowering::analyzeArguments(

@@ -36,9 +36,11 @@ def XOR  : ICMCALUInstr<0b010100, "xor", [(set GPR:$rd, (xor GPR:$rs1, GPR:$rs2)
 def NOT : ICMC2Regs16Instr<0b010101, "not", [(set GPR:$rd, (not GPR:$rs))]>;
 def CMP : ICMC2Regs16Instr<0b010110, "cmp">;
 
-def INC : ICMC1Reg16Instr<0b100100, "inc">;
-def DEC : ICMC1Reg16Instr<0b100100, "dec"> {
-  let Inst{6} = 1;
+let Constraints = "$rs = $rd" in {
+  def INC : ICMC2Regs16Instr<0b100100, "inc", [(set GPR:$rd, (add GPR:$rs, 1))]>;
+  def DEC : ICMC2Regs16Instr<0b100100, "dec", [(set GPR:$rd, (sub GPR:$rs, 1))]> {
+    let Inst{6} = 1;
+  }
 }
 
 def CLEARC : ICMCNoParams16Instr<0b001000, "clearc">;
@@ -84,7 +86,8 @@ def LOAD  : ICMCLoadStoreInstr<0b110000, "load $reg, $imm", (outs GPR:$reg),
 }
 
 def STORE  : ICMCLoadStoreInstr<0b110001, "store $imm, $reg", (outs), 
-                                (ins GPR:$reg, memuimm16:$imm)> {
+                                (ins GPR:$reg, memuimm16:$imm),
+                                [(store GPR:$reg, memuimm16:$imm)]> {
   let mayStore = 1;
 }
 
@@ -121,7 +124,7 @@ def LOADISP : ICMCInst<"loadisp $rd, $imm", (outs GPR:$rd),
                        (ins memuimm16:$imm, variable_ops),
                        [(set GPR:$rd, (load spmem:$imm))]> {
   bits<3> rd;
-  bits<32> imm;
+  bits<16> imm;
 
   let hasPostISelHook = 1;
   let Uses = [SP];
@@ -134,7 +137,7 @@ def STOREISP : ICMCInst<"storeisp $rs, $imm", (outs),
                        (ins GPR:$rs, memuimm16:$imm, variable_ops),
                        [(store GPR:$rs, spmem:$imm)]> {
   bits<3> rd;
-  bits<32> imm;
+  bits<16> imm;
 
   let hasPostISelHook = 1;
   let Uses = [SP];
@@ -143,14 +146,33 @@ def STOREISP : ICMCInst<"storeisp $rs, $imm", (outs),
   let isCodeGenOnly = 1;
 }
 
+def INCFS : ICMCInst<"incfs $imm", (outs), (ins memuimm16:$imm, variable_ops)> {
+  bits<16> imm;
 
-def ROTL    : ICMCShiftInstr<0b100, "rotl">;
-def ROTR    : ICMCShiftInstr<0b110, "rotr">;
+  let Uses = [SP, R4, R5];
 
-def SHIFTL0 : ICMCShiftInstr<0b000, "shiftl0">;
-def SHIFTL1 : ICMCShiftInstr<0b001, "shiftl1">;
-def SHIFTR0 : ICMCShiftInstr<0b010, "shiftr0">;
-def SHIFTR1 : ICMCShiftInstr<0b011, "shiftr1">;
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+}
+
+def DECFS : ICMCInst<"decfs $imm", (outs), (ins memuimm16:$imm, variable_ops)> {
+  bits<16> imm;
+
+  let Uses = [SP, R4, R5];
+
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+}
+
+let Constraints = "$rs = $rd" in {
+  def ROTL    : ICMCShiftInstr<0b100, "rotl">;
+  def ROTR    : ICMCShiftInstr<0b110, "rotr">;
+
+  def SHIFTL0 : ICMCShiftInstr<0b000, "shiftl0">;
+  def SHIFTL1 : ICMCShiftInstr<0b001, "shiftl1">;
+  def SHIFTR0 : ICMCShiftInstr<0b010, "shiftr0">;
+  def SHIFTR1 : ICMCShiftInstr<0b011, "shiftr1">;
+}
 
 def INCHAR  : ICMC1Reg16Instr <0b110101, "inchar">;
 def OUTCHAR : ICMC2Regs16Instr<0b110010, "outchar">;

@@ -7,6 +7,7 @@ namespace llvm {
 
 class ICMCMachineFunctionInfo : public MachineFunctionInfo {
   unsigned CalleeSavedFrameSize = 0;
+  bool HasFrameIndex = false;
   
 public:
 
@@ -21,6 +22,8 @@ public:
 
   unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
   void setCalleeSavedFrameSize(unsigned Bytes) { CalleeSavedFrameSize = Bytes; }
+  void setHasFrameIndex() {HasFrameIndex = true;}
+  bool hasFrameIndex() const {return HasFrameIndex;}
 };
 
 } // end namespace llvm
