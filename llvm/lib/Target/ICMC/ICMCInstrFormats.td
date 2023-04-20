@@ -15,6 +15,10 @@ def spmem : ComplexPattern<i16, 1, "SelectSPmem", [frameindex]>;
 def ICMCretflag : SDNode<"ICMCISD::RET_FLAG", SDTNone,
                          [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
+def SDT_ICMCCall : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
+def ICMCcall : SDNode<"ICMCISD::CALL", SDT_ICMCCall, [SDNPHasChain,
+                      SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
+
 // generic instruction
 class ICMCInst<string asmStr, dag outs, dag ins, 
                list<dag> pattern = []> : Instruction {
@@ -122,5 +126,7 @@ class ICMCJumpInstr<bits<4> subOpcode, string Mnemonic, list<dag> pattern = []>
     : ICMCBranchInstr<0b000010, subOpcode, Mnemonic, pattern>;
 
 class ICMCCallInstr<bits<4> subOpcode, string Mnemonic, list<dag> pattern = []>
-    : ICMCBranchInstr<0b000011, subOpcode, Mnemonic, pattern>;
+    : ICMCBranchInstr<0b000011, subOpcode, Mnemonic, pattern> {
+  let isCall = 1;
+}
 

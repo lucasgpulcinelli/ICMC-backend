@@ -11,7 +11,8 @@ namespace ICMCISD {
 enum NodeType {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
-  RET_FLAG
+  RET_FLAG,
+  CALL
 };
 
 } // end namespace ICMCISD
@@ -20,12 +21,16 @@ class ICMCSubtarget;
 class ICMCTargetMachine;
 
 class ICMCTargetLowering : public TargetLowering {
+private:
+  const ICMCSubtarget& Subtarget;
+
 public:
   explicit ICMCTargetLowering(const TargetMachine &TM,
                              const ICMCSubtarget &Subtarget);
 
+  template<typename T>
   static void analyzeArguments(const Function *F, const DataLayout *TD,
-                               const SmallVectorImpl<ISD::InputArg> &Args,
+                               const SmallVectorImpl<T> &Args,
                                SmallVectorImpl<CCValAssign> &ArgLocs,
                                CCState &CCInfo);
 
@@ -38,6 +43,15 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> & Outs,
                       const SmallVectorImpl<SDValue> & OutVals,
                       const SDLoc & DL, SelectionDAG & DAG) const override;
+
+  SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
+                    SmallVectorImpl<SDValue> &InVals) const override;
+
+  SDValue lowerCallResult(SDValue Chain, SDValue InFlag,
+                          CallingConv::ID CallConv, bool IsVarArg,
+                          const SmallVectorImpl<ISD::InputArg> &Ins,
+                          const SDLoc &DL, SelectionDAG &DAG,
+                          SmallVectorImpl<SDValue> &InVals) const;
 
   void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                      SDNode *Node) const override;

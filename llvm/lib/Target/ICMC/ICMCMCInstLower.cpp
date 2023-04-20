@@ -10,6 +10,13 @@
 
 using namespace llvm;
 
+MCOperand ICMCMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
+                                              MCSymbol *Sym) const {
+  const MCExpr *Expr = MCSymbolRefExpr::create(Sym, Ctx);
+
+  return MCOperand::createExpr(Expr);
+}
+
 void ICMCMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   OutMI.setOpcode(MI->getOpcode());
 
@@ -22,8 +29,17 @@ void ICMCMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     case MachineOperand::MO_Register:
       MCOp = MCOperand::createReg(MO.getReg());
       break;
+    case MachineOperand::MO_RegisterMask:
+      continue;
     case MachineOperand::MO_Immediate:
       MCOp = MCOperand::createImm(MO.getImm());
+      break;
+    case MachineOperand::MO_GlobalAddress:
+      MCOp = lowerSymbolOperand(MO, Printer.getSymbol(MO.getGlobal()));
+      break;
+    case MachineOperand::MO_ExternalSymbol:
+      MCOp = lowerSymbolOperand(
+          MO, Printer.GetExternalSymbolSymbol(MO.getSymbolName()));
       break;
     }
 

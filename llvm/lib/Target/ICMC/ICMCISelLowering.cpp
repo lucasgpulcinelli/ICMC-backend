@@ -12,16 +12,12 @@ static const MCPhysReg GPRRegList[] = {ICMC::R0, ICMC::R1, ICMC::R2, ICMC::R3};
 
 ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
                                        const ICMCSubtarget &Subtarget)
-      : TargetLowering(TM) {
+      : TargetLowering(TM), Subtarget(Subtarget) {
 
   addRegisterClass(MVT::i16, &ICMC::GPRRegClass);
 
   computeRegisterProperties(Subtarget.getRegisterInfo());
   setSchedulingPreference(Sched::RegPressure);
-
-  setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
-  setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
-  setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i16, Expand);
 
   setOperationAction(ISD::ADDC, MVT::i16, Legal);
   setOperationAction(ISD::SUBC, MVT::i16, Legal);
@@ -48,9 +44,10 @@ ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::MUL, MVT::i16, Legal);
 }
 
+template<typename T>
 void ICMCTargetLowering::analyzeArguments(
     const Function *F, const DataLayout *TD,
-    const SmallVectorImpl<ISD::InputArg> &Args,
+    const SmallVectorImpl<T> &Args,
     SmallVectorImpl<CCValAssign> &ArgLocs, CCState &CCInfo){
   ArrayRef<MCPhysReg> RegList = makeArrayRef(GPRRegList);
 
@@ -212,4 +209,147 @@ void ICMCTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     Register TmpReg = MRI.createVirtualRegister(&ICMC::GPRRegClass);
     MIB.addReg(TmpReg, RegState::Define | RegState::EarlyClobber);
   }
+}
+
+SDValue ICMCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
+    SmallVectorImpl<SDValue> &InVals) const {
+  SelectionDAG &DAG = CLI.DAG;
+  SDLoc &DL = CLI.DL;
+  SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
+  SmallVectorImpl<SDValue> &OutVals = CLI.OutVals;
+  SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
+  SDValue Chain = CLI.Chain;
+  SDValue Callee = CLI.Callee;
+  CallingConv::ID CallConv = CLI.CallConv;
+  bool IsVarArg = false; //no support for var args
+
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
+                 *DAG.getContext());
+
+
+  const Function *F = nullptr;
+  if (const GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    const GlobalValue *GV = G->getGlobal();
+    if (isa<Function>(GV))
+      F = cast<Function>(GV);
+    Callee =
+        DAG.getTargetGlobalAddress(GV, DL, getPointerTy(DAG.getDataLayout()));
+  } else if (const ExternalSymbolSDNode *ES =
+                 dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    Callee = DAG.getTargetExternalSymbol(ES->getSymbol(),
+                                         getPointerTy(DAG.getDataLayout()));
+  }
+
+  analyzeArguments(F, &DAG.getDataLayout(), Outs, ArgLocs, CCInfo);
+
+  SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
+
+  unsigned AI, AE;
+  bool HasStackArgs = false;
+  for (AI = 0, AE = ArgLocs.size(); AI != AE; ++AI) {
+    CCValAssign &VA = ArgLocs[AI];
+    EVT RegVT = VA.getLocVT();
+    SDValue Arg = OutVals[AI];
+
+    // Promote the value if needed. With Clang this should not happen.
+    switch (VA.getLocInfo()) {
+    default:
+      llvm_unreachable("Unknown loc info!");
+    case CCValAssign::Full:
+      break;
+    case CCValAssign::SExt:
+      Arg = DAG.getNode(ISD::SIGN_EXTEND, DL, RegVT, Arg);
+      break;
+    case CCValAssign::ZExt:
+      Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, RegVT, Arg);
+      break;
+    case CCValAssign::AExt:
+      Arg = DAG.getNode(ISD::ANY_EXTEND, DL, RegVT, Arg);
+      break;
+    case CCValAssign::BCvt:
+      Arg = DAG.getNode(ISD::BITCAST, DL, RegVT, Arg);
+      break;
+    }
+
+    // Stop when we encounter a stack argument, we need to process them
+    // in reverse order in the loop below.
+    if (VA.isMemLoc()) {
+      HasStackArgs = true;
+      break;
+    }
+
+    // Arguments that can be passed on registers must be kept in the RegsToPass
+    // vector.
+    RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+  }
+
+  if (HasStackArgs) {
+    llvm_unreachable("stack arguments not implemented");
+  }
+
+  // Build a sequence of copy-to-reg nodes chained together with token chain and
+  // flag operands which copy the outgoing args into registers.  The InFlag in
+  // necessary since all emited instructions must be stuck together.
+  SDValue InFlag;
+  for (auto Reg : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, DL, Reg.first, Reg.second, InFlag);
+    InFlag = Chain.getValue(1);
+  }
+
+  // Returns a chain & a flag for retval copy to use.
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+  SmallVector<SDValue, 8> Ops;
+  Ops.push_back(Chain);
+  Ops.push_back(Callee);
+
+  // Add argument registers to the end of the list so that they are known live
+  // into the call.
+  for (auto Reg : RegsToPass) {
+    Ops.push_back(DAG.getRegister(Reg.first, Reg.second.getValueType()));
+  }
+
+  // Add a register mask operand representing the call-preserved registers.
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  const uint32_t *Mask =
+      TRI->getCallPreservedMask(DAG.getMachineFunction(), CallConv);
+  assert(Mask && "Missing call preserved mask for calling convention");
+  Ops.push_back(DAG.getRegisterMask(Mask));
+
+  if (InFlag.getNode()) {
+    Ops.push_back(InFlag);
+  }
+
+  Chain = DAG.getNode(ICMCISD::CALL, DL, NodeTys, Ops);
+  InFlag = Chain.getValue(1);
+
+  // Handle result values, copying them out of physregs into vregs that we
+  // return.
+  return lowerCallResult(Chain, InFlag, CallConv, false, Ins, DL, DAG,
+                         InVals);
+}
+
+
+SDValue ICMCTargetLowering::lowerCallResult(
+    SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool IsVarArg,
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
+
+  // Assign locations to each value returned by this call.
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
+                 *DAG.getContext());
+
+  CCInfo.AnalyzeCallResult(Ins, RetCC_ICMC_BUILTIN);
+
+  // Copy all of the result registers out of their specified physreg.
+  for (CCValAssign const &RVLoc : RVLocs) {
+    Chain = DAG.getCopyFromReg(Chain, DL, RVLoc.getLocReg(), RVLoc.getValVT(),
+                               InFlag)
+                .getValue(1);
+    InFlag = Chain.getValue(2);
+    InVals.push_back(Chain.getValue(0));
+  }
+
+  return Chain;
 }

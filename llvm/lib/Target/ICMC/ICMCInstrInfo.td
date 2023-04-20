@@ -193,7 +193,7 @@ def JNOV: ICMCJumpInstr<0b1100, "jnov">;
 def JN  : ICMCJumpInstr<0b1101, "jn">;
 def JDZ : ICMCJumpInstr<0b1110, "jdz">;
 
-def CALL : ICMCCallInstr<0b0000, "call">;
+def CALL : ICMCCallInstr<0b0000, "call", [(ICMCcall imm:$imm)]>;
 def CEQ  : ICMCCallInstr<0b0001, "ceq">;
 def CNE  : ICMCCallInstr<0b0010, "cne">;
 def CZ   : ICMCCallInstr<0b0011, "cz">;
@@ -209,3 +209,6 @@ def CNOV : ICMCCallInstr<0b1100, "cnov">;
 def CN   : ICMCCallInstr<0b1101, "cn">;
 def CDZ  : ICMCCallInstr<0b1110, "cdz">;
 
+// Patterns for calling
+def : Pat<(ICMCcall(i16 tglobaladdr:$dst)), (CALL tglobaladdr:$dst)>;
+def : Pat<(ICMCcall(i16 texternalsym:$dst)), (CALL texternalsym:$dst)>;

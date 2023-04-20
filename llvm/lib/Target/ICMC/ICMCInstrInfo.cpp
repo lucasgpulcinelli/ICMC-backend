@@ -21,20 +21,22 @@ void ICMCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MI, const DebugLoc &DL, MCRegister DestReg,
     MCRegister SrcReg, bool KillSrc) const {
 
-  unsigned Opc;
-
   if(ICMC::GPRRegClass.contains(DestReg, SrcReg)) {
-    Opc = ICMC::MOV;
-  } else if (SrcReg == ICMC::SP && ICMC::GPRRegClass.contains(DestReg)) {
-    Opc = ICMC::MOVGetSP;
-  } else if (DestReg == ICMC::SP && ICMC::GPRRegClass.contains(SrcReg)) {
-    Opc = ICMC::MOVSetSP;
-  } else {
-    llvm_unreachable("invalid copy from registers");
+    BuildMI(MBB, MI, DL, get(ICMC::MOV), DestReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+  if (SrcReg == ICMC::SP && ICMC::GPRRegClass.contains(DestReg)) {
+    BuildMI(MBB, MI, DL, get(ICMC::MOVGetSP), DestReg);
+    return;
+  }
+  if (DestReg == ICMC::SP && ICMC::GPRRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MI, DL, get(ICMC::MOVSetSP))
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
   }
 
-  BuildMI(MBB, MI, DL, get(Opc), DestReg)
-    .addReg(SrcReg, getKillRegState(KillSrc));
+  llvm_unreachable("invalid copy from registers");
 }
 
 void ICMCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,

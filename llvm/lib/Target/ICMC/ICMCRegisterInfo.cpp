@@ -62,7 +62,7 @@ void ICMCRegisterInfo::eliminateFrameIndex(
 
 const uint32_t *ICMCRegisterInfo::getCallPreservedMask(
       const MachineFunction &MF, CallingConv::ID CC) const {
-    llvm_unreachable("getCallPreservedMask not implemented");
+  return CSR_Normal_RegMask;
 }
 
 Register ICMCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {

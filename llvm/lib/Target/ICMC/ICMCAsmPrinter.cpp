@@ -16,7 +16,7 @@ public:
   explicit ICMCAsmPrinter(TargetMachine &TM,
                           std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer)),
-        MCInstLowering() {}
+        MCInstLowering(OutContext, *this) {}
 
   StringRef getPassName() const override { return "ICMC Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;
