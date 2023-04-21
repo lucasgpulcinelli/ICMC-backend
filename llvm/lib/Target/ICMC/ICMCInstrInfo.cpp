@@ -4,6 +4,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 
@@ -49,8 +50,13 @@ void ICMCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     DL = MI->getDebugLoc();
   }
 
+  Register Tmp1 = scavengeGPR(TRI, MI);
+  Register Tmp2 = scavengeGPR(TRI, MI, Tmp1);
+
   BuildMI(MBB, MI, DL, get(ICMC::LOADISP), DestReg)
-      .addFrameIndex(FrameIndex);
+      .addFrameIndex(FrameIndex)
+      .addReg(Tmp1, RegState::Define | RegState::EarlyClobber)
+      .addReg(Tmp2, RegState::Define | RegState::EarlyClobber);
 }
 
 
@@ -70,8 +76,40 @@ void ICMCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     DL = MI->getDebugLoc();
   }
 
+  Register Tmp1 = scavengeGPR(TRI, MI);
+  Register Tmp2 = scavengeGPR(TRI, MI, Tmp1);
+
   BuildMI(MBB, MI, DL, get(ICMC::STOREISP))
       .addReg(SrcReg, getKillRegState(isKill))
-      .addFrameIndex(FrameIndex);
+      .addFrameIndex(FrameIndex)
+      .addReg(Tmp1, RegState::Define | RegState::EarlyClobber)
+      .addReg(Tmp2, RegState::Define | RegState::EarlyClobber);
+}
+
+
+Register ICMCInstrInfo::scavengeGPR(const TargetRegisterInfo* TRI,
+    MachineBasicBlock::iterator &MI, Register Prev) const {
+  MachineBasicBlock *MBB = MI->getParent();
+  RegScavenger RS;
+
+  RS.enterBasicBlock(*MBB);
+  RS.forward(MI);
+
+  BitVector Candidates =
+      TRI->getAllocatableSet(*MBB->getParent(), &ICMC::GPRRegClass);
+
+  // Exclude all the registers being used by the instruction.
+  for (MachineOperand &MO : MI->operands()) {
+    if (MO.isReg() && MO.getReg() != 0 && !MO.isDef() &&
+        !Register::isVirtualRegister(MO.getReg()))
+      Candidates.reset(MO.getReg());
+  }
+
+  BitVector Available = RS.getRegsAvailable(&ICMC::GPRRegClass);
+  Available &= Candidates;
+
+  signed Reg = Available.find_next(Prev);
+  assert(Reg != -1 && "ran out of registers");
+  return Reg;
 }
 

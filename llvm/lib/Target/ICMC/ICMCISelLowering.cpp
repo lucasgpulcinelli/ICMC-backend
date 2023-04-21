@@ -285,7 +285,18 @@ SDValue ICMCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   }
 
   if (HasStackArgs) {
-    llvm_unreachable("stack arguments not implemented");
+    SmallVector<SDValue, 8> MemOpChains;
+    for (; AI != AE; AI++) {
+      CCValAssign &VA = ArgLocs[AI];
+      SDValue Arg = OutVals[AI];
+
+      assert(VA.isMemLoc());
+
+      MemOpChains.push_back(DAG.getNode(ICMCISD::PUSH_ARG, DL, VA.getLocVT(), Chain, Arg));
+    }
+
+    if (!MemOpChains.empty())
+      Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain and
@@ -322,6 +333,17 @@ SDValue ICMCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   Chain = DAG.getNode(ICMCISD::CALL, DL, NodeTys, Ops);
   InFlag = Chain.getValue(1);
+
+  if(ArgLocs.size() > 4){
+    Chain = DAG.getCALLSEQ_END(
+        Chain, DAG.getIntPtrConstant(ArgLocs.size() - 4, DL, true),
+        DAG.getUNDEF(MVT::i16), InFlag, DL);
+
+    if (!Ins.empty()) {
+      InFlag = Chain.getValue(1);
+    }
+  }
+
 
   // Handle result values, copying them out of physregs into vregs that we
   // return.

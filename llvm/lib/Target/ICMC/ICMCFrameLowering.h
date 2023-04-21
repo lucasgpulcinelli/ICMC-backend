@@ -14,8 +14,8 @@ class ICMCInstrInfo;
 class ICMCFrameLowering : public TargetFrameLowering {
 
 public:
-  ICMCFrameLowering(const ICMCSubtarget &St)
-      : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, Align(2), 0) {}
+  ICMCFrameLowering(const ICMCSubtarget &St) : TargetFrameLowering(
+      TargetFrameLowering::StackGrowsDown, Align(2), -2) {}
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 

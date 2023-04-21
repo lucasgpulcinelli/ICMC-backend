@@ -64,8 +64,9 @@ def PUSH : ICMC1Reg16Instr<0b000101, "push"> {
   dag OutOperandList = (outs); 
 
   let Uses = [SP];
-  let mayStore = 1;
 }
+
+def : Pat<(ICMCPushArg GPR:$reg), (PUSH GPR:$reg)>;
 
 def POP  : ICMC1Reg16Instr<0b000110, "pop"> {
   let mayLoad = 1;
@@ -149,7 +150,7 @@ def STOREISP : ICMCInst<"storeisp $rs, $imm", (outs),
 def INCFS : ICMCInst<"incfs $imm", (outs), (ins memuimm16:$imm, variable_ops)> {
   bits<16> imm;
 
-  let Uses = [SP, R4, R5];
+  let Uses = [SP];
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
@@ -158,11 +159,13 @@ def INCFS : ICMCInst<"incfs $imm", (outs), (ins memuimm16:$imm, variable_ops)> {
 def DECFS : ICMCInst<"decfs $imm", (outs), (ins memuimm16:$imm, variable_ops)> {
   bits<16> imm;
 
-  let Uses = [SP, R4, R5];
+  let Uses = [SP];
 
   let isPseudo = 1;
   let isCodeGenOnly = 1;
 }
+
+def : Pat<(ICMCCallseqEnd i16:$imm, (undef)), (DECFS i16:$imm, R1, R2)>;
 
 let Constraints = "$rs = $rd" in {
   def ROTL    : ICMCShiftInstr<0b100, "rotl">;

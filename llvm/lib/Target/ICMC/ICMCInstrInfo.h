@@ -34,6 +34,10 @@ public:
                            bool isKill, int FrameIndex,
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
+
+  Register scavengeGPR(const TargetRegisterInfo* TRI,
+                       MachineBasicBlock::iterator& MI,
+                       Register Prev = ICMC::R0) const;
 };
 
 } // end namespace llvm

@@ -29,9 +29,9 @@ void ICMCFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   BuildMI(MBB, MBBI, DL, TII.get(ICMC::INCFS))
-      .addImm(FrameSize/2+1)
-      .addReg(ICMC::R4, RegState::Define)
-      .addReg(ICMC::R5, RegState::Define)
+      .addImm(FrameSize/2)
+      .addReg(ICMC::R4)
+      .addReg(ICMC::R5)
       .setMIFlag(MachineInstr::FrameSetup);
 }
 
@@ -62,7 +62,7 @@ void ICMCFrameLowering::emitEpilogue(MachineFunction &MF,
 
 
   BuildMI(MBB, MBBI, DL, TII.get(ICMC::DECFS))
-    .addImm(FrameSize/2+1)
+    .addImm(FrameSize/2)
     .addReg(ICMC::R4)
     .addReg(ICMC::R5);
 }

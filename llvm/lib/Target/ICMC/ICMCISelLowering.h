@@ -12,7 +12,9 @@ enum NodeType {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
   RET_FLAG,
-  CALL
+  PUSH_ARG,
+  CALL,
+  CALLSEQ_END
 };
 
 } // end namespace ICMCISD
