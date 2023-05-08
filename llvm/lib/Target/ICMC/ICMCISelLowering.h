@@ -12,7 +12,6 @@ enum NodeType {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
   RET_FLAG,
-  PUSH_ARG,
   CALL,
   CALLSEQ_END
 };
@@ -54,9 +53,6 @@ public:
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           const SDLoc &DL, SelectionDAG &DAG,
                           SmallVectorImpl<SDValue> &InVals) const;
-
-  void AdjustInstrPostInstrSelection(MachineInstr &MI,
-                                     SDNode *Node) const override;
 };
 
 } // end namespace llvm

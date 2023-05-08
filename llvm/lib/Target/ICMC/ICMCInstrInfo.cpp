@@ -51,12 +51,20 @@ void ICMCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   }
 
   Register Tmp1 = scavengeGPR(TRI, MI);
-  Register Tmp2 = scavengeGPR(TRI, MI, Tmp1);
 
-  BuildMI(MBB, MI, DL, get(ICMC::LOADISP), DestReg)
-      .addFrameIndex(FrameIndex)
-      .addReg(Tmp1, RegState::Define | RegState::EarlyClobber)
-      .addReg(Tmp2, RegState::Define | RegState::EarlyClobber);
+  BuildMI(MBB, MI, DL, get(ICMC::MOVGetSP), Tmp1);
+
+  Register Tmp2 = scavengeGPR(TRI, MI);
+
+  BuildMI(MBB, MI, DL, get(ICMC::LOADN), Tmp2)
+    .addImm(FrameIndex);
+
+  BuildMI(MBB, MI, DL, get(ICMC::ADD), Tmp2)
+    .addReg(Tmp2)
+    .addReg(Tmp1);
+
+  BuildMI(MBB, MI, DL, get(ICMC::LOADI), DestReg)
+    .addReg(Tmp2);
 }
 
 
@@ -77,18 +85,26 @@ void ICMCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   }
 
   Register Tmp1 = scavengeGPR(TRI, MI);
-  Register Tmp2 = scavengeGPR(TRI, MI, Tmp1);
 
-  BuildMI(MBB, MI, DL, get(ICMC::STOREISP))
-      .addReg(SrcReg, getKillRegState(isKill))
-      .addFrameIndex(FrameIndex)
-      .addReg(Tmp1, RegState::Define | RegState::EarlyClobber)
-      .addReg(Tmp2, RegState::Define | RegState::EarlyClobber);
+  BuildMI(MBB, MI, DL, get(ICMC::MOVGetSP), Tmp1);
+
+  Register Tmp2 = scavengeGPR(TRI, MI);
+
+  BuildMI(MBB, MI, DL, get(ICMC::LOADN), Tmp2)
+    .addImm(FrameIndex);
+
+  BuildMI(MBB, MI, DL, get(ICMC::ADD), Tmp2)
+    .addReg(Tmp2)
+    .addReg(Tmp1);
+
+  BuildMI(MBB, MI, DL, get(ICMC::STOREI))
+    .addReg(Tmp2)
+    .addReg(SrcReg);
 }
 
 
 Register ICMCInstrInfo::scavengeGPR(const TargetRegisterInfo* TRI,
-    MachineBasicBlock::iterator &MI, Register Prev) const {
+    MachineBasicBlock::iterator &MI) const {
   MachineBasicBlock *MBB = MI->getParent();
   RegScavenger RS;
 
@@ -108,7 +124,7 @@ Register ICMCInstrInfo::scavengeGPR(const TargetRegisterInfo* TRI,
   BitVector Available = RS.getRegsAvailable(&ICMC::GPRRegClass);
   Available &= Candidates;
 
-  signed Reg = Available.find_next(Prev);
+  signed Reg = Available.find_first();
   assert(Reg != -1 && "ran out of registers");
   return Reg;
 }

@@ -19,9 +19,6 @@ def SDT_ICMCCall : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 def ICMCcall : SDNode<"ICMCISD::CALL", SDT_ICMCCall, [SDNPHasChain,
                       SDNPOutGlue, SDNPOptInGlue, SDNPVariadic]>;
 
-def SDT_ICMCPushArgs : SDTypeProfile<0, -1, [SDTCisVT<0, i16>]>;
-def ICMCPushArg : SDNode<"ICMCISD::PUSH_ARG", SDT_ICMCPushArgs, [SDNPHasChain]>;
-
 def SDT_ICMCCallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i16>, SDTCisVT<1, i16>]>;
 def ICMCCallseqEnd : SDNode<"ISD::CALLSEQ_END", SDT_ICMCCallSeqEnd,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;

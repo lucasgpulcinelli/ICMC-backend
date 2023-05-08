@@ -36,8 +36,7 @@ public:
                            const TargetRegisterInfo *TRI) const override;
 
   Register scavengeGPR(const TargetRegisterInfo* TRI,
-                       MachineBasicBlock::iterator& MI,
-                       Register Prev = ICMC::R0) const;
+                       MachineBasicBlock::iterator& MI) const;
 };
 
 } // end namespace llvm

@@ -66,8 +66,6 @@ def PUSH : ICMC1Reg16Instr<0b000101, "push"> {
   let Uses = [SP];
 }
 
-def : Pat<(ICMCPushArg GPR:$reg), (PUSH GPR:$reg)>;
-
 def POP  : ICMC1Reg16Instr<0b000110, "pop"> {
   let mayLoad = 1;
   let Uses = [SP];
@@ -98,6 +96,8 @@ def LOADI  : ICMC2Regs16Instr<0b111100, "loadi"> {
 
 def STOREI : ICMC2Regs16Instr<0b111101, "storei"> {
   let mayStore = 1;
+  let InOperandList = (ins GPR:$rd, GPR:$rs);
+  let OutOperandList = (outs);
 }
 
 def MOV : ICMC2Regs16Instr<0b110011, "mov">;
@@ -121,31 +121,11 @@ def MOVSetSP : ICMC16Inst<0b110011, "mov sp, $rs", (outs), (ins GPR:$rs)> {
   let Inst{3-0} = 0b0011;
 }
 
-def LOADISP : ICMCInst<"loadisp $rd, $imm", (outs GPR:$rd),
-                       (ins memuimm16:$imm, variable_ops),
-                       [(set GPR:$rd, (load spmem:$imm))]> {
-  bits<3> rd;
-  bits<16> imm;
+def : Pat<(load spmem:$imm), (LOADI (ADD (MOVGetSP), (LOADN spmem:$imm)))>;
+def : Pat<(load SP), (POP)>;
 
-  let hasPostISelHook = 1;
-  let Uses = [SP];
-
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-}
-
-def STOREISP : ICMCInst<"storeisp $rs, $imm", (outs),
-                       (ins GPR:$rs, memuimm16:$imm, variable_ops),
-                       [(store GPR:$rs, spmem:$imm)]> {
-  bits<3> rd;
-  bits<16> imm;
-
-  let hasPostISelHook = 1;
-  let Uses = [SP];
-
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
-}
+def : Pat<(store GPR:$rd, spmem:$imm), (STOREI (ADD (MOVGetSP), (LOADN spmem:$imm)), GPR:$rd)>;
+def : Pat<(store GPR:$rd, SP), (PUSH $rd)>;
 
 def INCFS : ICMCInst<"incfs $imm", (outs), (ins memuimm16:$imm, variable_ops)> {
   bits<16> imm;

@@ -28,15 +28,14 @@ private:
   const TargetInstrInfo *TII;
   const ICMCRegisterInfo *TRI;
 
-  MachineInstrBuilder buildMI(Block &MBB, BlockIt MBBI, unsigned Opcode) {
-    return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Opcode));
+  MachineInstrBuilder buildMI(Block &MBB, BlockIt MBBI, unsigned Opcode,
+                              Register DestReg) {
+    return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Opcode), DestReg);
   }
 
   bool expandMBB(Block &MBB);
   bool expandMI(Block &MBB, BlockIt MBBI);
 
-  bool expandLOADISP(Block &MBB, BlockIt MBBI, MachineInstr &MI);
-  bool expandSTOREISP(Block &MBB, BlockIt MBBI, MachineInstr &MI);
   bool expandINCDECFS(Block &MBB, BlockIt MBBI, MachineInstr &MI,
                       bool IsIncrement);
 };
@@ -86,66 +85,19 @@ bool ICMCExpandPseudo::expandMBB(Block &MBB) {
   return Modified;
 }
 
-bool ICMCExpandPseudo::expandLOADISP(Block &MBB, BlockIt MBBI,
-                                     MachineInstr &MI){
-  buildMI(MBB, MBBI, ICMC::MOVGetSP)
-    .addReg(MI.getOperand(2).getReg(), RegState::Define);
-
-  buildMI(MBB, MBBI, ICMC::LOADN)
-    .addReg(MI.getOperand(3).getReg(), RegState::Define)
-    .addImm(MI.getOperand(1).getImm());
-
-  buildMI(MBB, MBBI, ICMC::ADD)
-    .addReg(MI.getOperand(3).getReg())
-    .addReg(MI.getOperand(2).getReg(), RegState::Kill)
-    .addReg(MI.getOperand(3).getReg());
-
-  buildMI(MBB, MBBI, ICMC::LOADI)
-    .addReg(MI.getOperand(0).getReg(), RegState::Define)
-    .addReg(MI.getOperand(3).getReg(), RegState::Kill);
-
-  MI.eraseFromParent();
-  return true;
-}
-
-bool ICMCExpandPseudo::expandSTOREISP(Block &MBB, BlockIt MBBI, 
-                                      MachineInstr &MI){
-  buildMI(MBB, MBBI, ICMC::MOVGetSP)
-    .addReg(MI.getOperand(2).getReg(), RegState::Define);
-
-  buildMI(MBB, MBBI, ICMC::LOADN)
-    .addReg(MI.getOperand(3).getReg(), RegState::Define)
-    .addImm(MI.getOperand(1).getImm());
-
-  buildMI(MBB, MBBI, ICMC::ADD)
-    .addReg(MI.getOperand(3).getReg())
-    .addReg(MI.getOperand(2).getReg(), RegState::Kill)
-    .addReg(MI.getOperand(3).getReg());
-
-  buildMI(MBB, MBBI, ICMC::STOREI)
-    .addReg(MI.getOperand(3).getReg(), RegState::Kill)
-    .addReg(MI.getOperand(0).getReg(), RegState::Define);
-
-  MI.eraseFromParent();
-  return true;
-}
-
 bool ICMCExpandPseudo::expandINCDECFS(Block &MBB, BlockIt MBBI,
                                       MachineInstr &MI, bool IsIncrement){
-  buildMI(MBB, MBBI, ICMC::LOADN)
-    .addReg(MI.getOperand(1).getReg(), RegState::Define)
+  buildMI(MBB, MBBI, ICMC::LOADN, MI.getOperand(1).getReg())
     .addImm(MI.getOperand(0).getImm());
 
-  buildMI(MBB, MBBI, ICMC::MOVGetSP)
-    .addReg(MI.getOperand(2).getReg(), RegState::Define);
+  buildMI(MBB, MBBI, ICMC::MOVGetSP, MI.getOperand(2).getReg());
 
-  buildMI(MBB, MBBI, (IsIncrement)? ICMC::SUB : ICMC::ADD)
-    .addReg(MI.getOperand(1).getReg())
+  buildMI(MBB, MBBI, (IsIncrement)? ICMC::SUB : ICMC::ADD,
+      MI.getOperand(1).getReg())
     .addReg(MI.getOperand(2).getReg(), RegState::Kill)
     .addReg(MI.getOperand(1).getReg());
 
-  buildMI(MBB, MBBI, ICMC::MOVSetSP)
-    .addReg(MI.getOperand(1).getReg(), RegState::Kill);
+  buildMI(MBB, MBBI, ICMC::MOVSetSP, MI.getOperand(1).getReg());
 
   MI.eraseFromParent();
   return true;
@@ -156,10 +108,6 @@ bool ICMCExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
   int Opcode = MBBI->getOpcode();
 
   switch(Opcode){
-  case ICMC::LOADISP:
-    return expandLOADISP(MBB, MBBI, MI);
-  case ICMC::STOREISP:
-    return expandSTOREISP(MBB, MBBI, MI);
   case ICMC::DECFS:
   case ICMC::INCFS:
     return expandINCDECFS(MBB, MBBI, MI, Opcode == ICMC::INCFS);

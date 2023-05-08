@@ -17,7 +17,6 @@ ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
   addRegisterClass(MVT::i16, &ICMC::GPRRegClass);
 
   computeRegisterProperties(Subtarget.getRegisterInfo());
-  setSchedulingPreference(Sched::RegPressure);
 
   setOperationAction(ISD::ADDC, MVT::i16, Legal);
   setOperationAction(ISD::SUBC, MVT::i16, Legal);
@@ -190,27 +189,6 @@ SDValue ICMCTargetLowering::LowerReturn(SDValue Chain,
   return DAG.getNode(ICMCISD::RET_FLAG, DL, MVT::Other, RetOps);
 }
 
-void ICMCTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
-                                                       SDNode *Node) const {
-  if (MI.getOpcode() != ICMC::LOADISP && MI.getOpcode() != ICMC::STOREISP) {
-    return;
-  }
-
-  DebugLoc DL = MI.getDebugLoc();
-  MachineFunction *MF = MI.getParent()->getParent();
-  MachineRegisterInfo &MRI = MF->getRegInfo();
-  MachineInstrBuilder MIB(*MF, MI);
-
-  if (!Node->hasAnyUseOfValue(0)) {
-    MI.getOperand(0).setIsDead(true);
-  }
-
-  for(int I = 0; I < 2; I++) {
-    Register TmpReg = MRI.createVirtualRegister(&ICMC::GPRRegClass);
-    MIB.addReg(TmpReg, RegState::Define | RegState::EarlyClobber);
-  }
-}
-
 SDValue ICMCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
@@ -284,19 +262,20 @@ SDValue ICMCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
   }
 
+  SmallVector<SDValue, 8> MemOpChains;
   if (HasStackArgs) {
-    SmallVector<SDValue, 8> MemOpChains;
+    MachineFunction &MF = DAG.getMachineFunction();
+
     for (; AI != AE; AI++) {
       CCValAssign &VA = ArgLocs[AI];
       SDValue Arg = OutVals[AI];
 
       assert(VA.isMemLoc());
 
-      MemOpChains.push_back(DAG.getNode(ICMCISD::PUSH_ARG, DL, VA.getLocVT(), Chain, Arg));
+      MemOpChains.push_back(
+          DAG.getStore(Chain, DL, Arg, DAG.getRegister(ICMC::SP, getPointerTy(DAG.getDataLayout())),
+                       MachinePointerInfo::getStack(MF, VA.getLocMemOffset())));
     }
-
-    if (!MemOpChains.empty())
-      Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain and
@@ -335,6 +314,10 @@ SDValue ICMCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   InFlag = Chain.getValue(1);
 
   if(ArgLocs.size() > 4){
+    if (!MemOpChains.empty()) {
+      Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
+    }
+
     Chain = DAG.getCALLSEQ_END(
         Chain, DAG.getIntPtrConstant(ArgLocs.size() - 4, DL, true),
         DAG.getUNDEF(MVT::i16), InFlag, DL);
