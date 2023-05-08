@@ -358,3 +358,66 @@ SDValue ICMCTargetLowering::lowerCallResult(
 
   return Chain;
 }
+
+std::pair<unsigned, const TargetRegisterClass *>
+ICMCTargetLowering::getRegForInlineAsmConstraint(
+    const TargetRegisterInfo *TRI, StringRef Constraint, MVT VT) const {
+
+  if(Constraint.size() == 1 && Constraint[0] == 'r'){
+    return std::make_pair(0U, &ICMC::GPRRegClass);
+  }
+
+  return TargetLowering::getRegForInlineAsmConstraint(
+      Subtarget.getRegisterInfo(), Constraint, VT);
+}
+
+
+ICMCTargetLowering::ConstraintType
+ICMCTargetLowering::getConstraintType(StringRef Constraint) const {
+  if (Constraint.size() == 1) {
+    // See http://www.nongnu.org/avr-libc/user-manual/inline_asm.html
+    switch (Constraint[0]) {
+    default:
+      break;
+    case 'r': // Any register
+      return C_RegisterClass;
+    case 'i': // 16-bit unsigned constant
+      return C_Immediate;
+    }
+  }
+
+  return TargetLowering::getConstraintType(Constraint);
+}
+
+
+void ICMCTargetLowering::LowerAsmOperandForConstraint(
+    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
+    SelectionDAG &DAG) const {
+
+  SDValue Result;
+  SDLoc DL(Op);
+  EVT Ty = Op.getValueType();
+
+  const ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op);
+  if (!C) {
+    return;
+  }
+
+  uint64_t CUVal64 = C->getZExtValue();
+
+  if(Constraint[0] == 'i') {
+    if (!isUInt<16>(CUVal64)) {
+      return;
+    }
+  } else {
+    return;
+  }
+
+  Result = DAG.getTargetConstant(CUVal64, DL, Ty);
+  if (Result.getNode()) {
+    Ops.push_back(Result);
+    return;
+  }
+
+  return TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
+}

@@ -9,6 +9,7 @@ tablegen(LLVM ICMCGenCallingConv.inc -gen-callingconv)
 tablegen(LLVM ICMCGenDAGISel.inc -gen-dag-isel)
 tablegen(LLVM ICMCGenAsmMatcher.inc -gen-asm-matcher)
 tablegen(LLVM ICMCGenMCCodeEmitter.inc -gen-emitter)
+tablegen(LLVM ICMCGenAsmWriter.inc -gen-asm-writer)
 
 add_public_tablegen_target(ICMCCommonTableGen)
 
