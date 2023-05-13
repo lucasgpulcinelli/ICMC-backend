@@ -41,6 +41,10 @@ ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::UREM, MVT::i16, Legal);
 
   setOperationAction(ISD::MUL, MVT::i16, Legal);
+
+  setOperationAction(ISD::SETCC, MVT::i16, Custom);
+  setOperationAction(ISD::SELECT_CC, MVT::i16, Custom);
+  setOperationAction(ISD::BR_CC, MVT::i16, Custom);
 }
 
 template<typename T>
@@ -93,7 +97,7 @@ void ICMCTargetLowering::analyzeArguments(
         Reg = CCInfo.AllocateReg(RegList[RegIdx]);
       } else {
         llvm_unreachable(
-            "calling convention can only manage i8 and i16 types");
+            "calling convention can only manage i16 types");
       }
       assert(Reg && "register not available in calling convention");
       CCInfo.addLoc(CCValAssign::getReg(i, VT, Reg, VT, CCValAssign::Full));
@@ -420,4 +424,164 @@ void ICMCTargetLowering::LowerAsmOperandForConstraint(
   }
 
   return TargetLowering::LowerAsmOperandForConstraint(Op, Constraint, Ops, DAG);
+}
+
+SDValue ICMCTargetLowering::LowerOperation(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  switch (Op.getOpcode()) {
+  case ISD::SETCC:
+    return LowerSETCC(Op, DAG);
+  case ISD::SELECT_CC:
+    return LowerSELECT_CC(Op, DAG);
+  case ISD::BR_CC:
+    return LowerBR_CC(Op, DAG);
+  default:
+    llvm_unreachable("LowerOperation not implemented for this opcode!");
+  }
+}
+
+static ICMCCC::CondCodes intCCToICMCCC(ISD::CondCode CC) {
+  switch (CC) {
+  default:
+    printf("%d\n", CC);
+    llvm_unreachable("Unknown condition code!");
+  case ISD::SETEQ:
+    return ICMCCC::COND_EQ;
+  case ISD::SETNE:
+    return ICMCCC::COND_NE;
+  case ISD::SETUGT:
+    return ICMCCC::COND_GT;
+  case ISD::SETULT:
+    return ICMCCC::COND_LT;
+  case ISD::SETUGE:
+    return ICMCCC::COND_GE;
+  case ISD::SETULE:
+    return ICMCCC::COND_LE;
+  }
+}
+
+SDValue ICMCTargetLowering::getICMCCmp(SDValue LHS, SDValue RHS,
+                                       ISD::CondCode CC, SDValue &ICMCcc,
+                                       SelectionDAG &DAG, SDLoc DL) const {
+  SDValue Cmp = DAG.getNode(ICMCISD::CMP, DL, MVT::Glue, LHS, RHS);
+
+  ICMCcc = DAG.getConstant(intCCToICMCCC(CC), DL, MVT::i16);
+  return Cmp;
+}
+
+SDValue ICMCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  SDLoc DL(Op);
+
+  SDValue TargetCC;
+  SDValue Cmp = getICMCCmp(LHS, RHS, CC, TargetCC, DAG, DL);
+
+  SDValue TrueV = DAG.getConstant(1, DL, Op.getValueType());
+  SDValue FalseV = DAG.getConstant(0, DL, Op.getValueType());
+  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
+  SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
+
+  return DAG.getNode(ICMCISD::SELECT_CC, DL, VTs, Ops);
+}
+
+SDValue ICMCTargetLowering::LowerSELECT_CC(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  SDValue LHS = Op.getOperand(0);
+  SDValue RHS = Op.getOperand(1);
+  SDValue TrueV = Op.getOperand(2);
+  SDValue FalseV = Op.getOperand(3);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  SDLoc dl(Op);
+
+  SDValue TargetCC;
+  SDValue Cmp = getICMCCmp(LHS, RHS, CC, TargetCC, DAG, dl);
+
+  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
+  SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
+
+  return DAG.getNode(ICMCISD::SELECT_CC, dl, VTs, Ops);
+}
+
+SDValue ICMCTargetLowering::LowerBR_CC(SDValue Op,
+                                       SelectionDAG &DAG) const {
+  SDValue Chain = Op.getOperand(0);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  SDValue LHS = Op.getOperand(2);
+  SDValue RHS = Op.getOperand(3);
+  SDValue Dest = Op.getOperand(4);
+  SDLoc dl(Op);
+
+  SDValue TargetCC;
+  SDValue Cmp = getICMCCmp(LHS, RHS, CC, TargetCC, DAG, dl);
+
+  return DAG.getNode(ICMCISD::BRCOND, dl, MVT::Other, Chain, Dest, TargetCC,
+                     Cmp);
+}
+
+MachineBasicBlock *ICMCTargetLowering::EmitInstrWithCustomInserter(
+      MachineInstr &MI, MachineBasicBlock *MBB) const {
+
+  const ICMCInstrInfo &TII = (const ICMCInstrInfo &)*MI.getParent()
+                                ->getParent()
+                                ->getSubtarget()
+                                .getInstrInfo();
+  DebugLoc dl = MI.getDebugLoc();
+
+  // To "insert" a SELECT instruction, we insert the diamond
+  // control-flow pattern. The incoming instruction knows the
+  // destination vreg to set, the condition code register to branch
+  // on, the true/false values to select between, and a branch opcode
+  // to use.
+
+  MachineFunction *MF = MBB->getParent();
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineBasicBlock *FallThrough = MBB->getFallThrough();
+
+  // If the current basic block falls through to another basic block,
+  // we must insert an unconditional branch to the fallthrough destination
+  // if we are to insert basic blocks at the prior fallthrough point.
+  if (FallThrough != nullptr) {
+    BuildMI(MBB, dl, TII.get(ICMC::JMP)).addMBB(FallThrough);
+  }
+
+  MachineBasicBlock *trueMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *falseMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+
+  MachineFunction::iterator I;
+  for (I = MF->begin(); I != MF->end() && &(*I) != MBB; ++I)
+    ;
+  if (I != MF->end())
+    ++I;
+  MF->insert(I, trueMBB);
+  MF->insert(I, falseMBB);
+
+  // Transfer remaining instructions and all successors of the current
+  // block to the block which will contain the Phi node for the
+  // select.
+  trueMBB->splice(trueMBB->begin(), MBB,
+                  std::next(MachineBasicBlock::iterator(MI)), MBB->end());
+  trueMBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+  ICMCCC::CondCodes CC = (ICMCCC::CondCodes)MI.getOperand(3).getImm();
+  BuildMI(MBB, dl, TII.getBrCond(CC)).addMBB(trueMBB);
+  BuildMI(MBB, dl, TII.get(ICMC::JMP)).addMBB(falseMBB);
+  MBB->addSuccessor(falseMBB);
+  MBB->addSuccessor(trueMBB);
+
+  // Unconditionally flow back to the true block
+  BuildMI(falseMBB, dl, TII.get(ICMC::JMP)).addMBB(trueMBB);
+  falseMBB->addSuccessor(trueMBB);
+
+  // Set up the Phi node to determine where we came from
+  BuildMI(*trueMBB, trueMBB->begin(), dl, TII.get(ICMC::PHI),
+          MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(1).getReg())
+      .addMBB(MBB)
+      .addReg(MI.getOperand(2).getReg())
+      .addMBB(falseMBB);
+
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
+  return trueMBB;
 }

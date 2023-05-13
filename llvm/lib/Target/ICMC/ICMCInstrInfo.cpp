@@ -129,3 +129,21 @@ Register ICMCInstrInfo::scavengeGPR(const TargetRegisterInfo* TRI,
   return Reg;
 }
 
+const MCInstrDesc &ICMCInstrInfo::getBrCond(ICMCCC::CondCodes CC) const {
+  switch (CC) {
+  default:
+    llvm_unreachable("Unknown condition code!");
+  case ICMCCC::COND_EQ:
+    return get(ICMC::JEQ);
+  case ICMCCC::COND_NE:
+    return get(ICMC::JNE);
+  case ICMCCC::COND_GT:
+    return get(ICMC::JGR);
+  case ICMCCC::COND_LT:
+    return get(ICMC::JLE);
+  case ICMCCC::COND_LE:
+    return get(ICMC::JEL);
+  case ICMCCC::COND_GE:
+    return get(ICMC::JEG);
+  }
+}

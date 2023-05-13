@@ -41,6 +41,10 @@ void ICMCMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
       MCOp = lowerSymbolOperand(
           MO, Printer.GetExternalSymbolSymbol(MO.getSymbolName()));
       break;
+    case MachineOperand::MO_MachineBasicBlock:
+      MCOp = MCOperand::createExpr(
+          MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), Ctx));
+      break;
     }
 
     OutMI.addOperand(MCOp);

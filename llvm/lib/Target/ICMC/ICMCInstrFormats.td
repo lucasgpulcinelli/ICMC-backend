@@ -9,6 +9,8 @@ def memuimm16 : Operand<iPTR>, ImmLeaf<iPTR, [{return isInt<16>(Imm);}]> {
   let EncoderMethod = "encodeMemoryLabel";
 }
 
+def jbb_16 : Operand<OtherVT>;
+
 def spmem : ComplexPattern<i16, 1, "SelectSPmem", [frameindex]>;
 
 // return statement flag 
@@ -22,6 +24,27 @@ def ICMCcall : SDNode<"ICMCISD::CALL", SDT_ICMCCall, [SDNPHasChain,
 def SDT_ICMCCallSeqEnd : SDCallSeqEnd<[SDTCisVT<0, i16>, SDTCisVT<1, i16>]>;
 def ICMCCallseqEnd : SDNode<"ISD::CALLSEQ_END", SDT_ICMCCallSeqEnd,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+
+def SDT_ICMCBrcond
+    : SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>, SDTCisVT<1, i16>]>;
+def ICMCbrcond
+    : SDNode<"ICMCISD::BRCOND", SDT_ICMCBrcond, [SDNPHasChain, SDNPInGlue]>;
+
+def SDT_ICMCCmp : SDTypeProfile<0, 2, [SDTCisSameAs<0, 1>]>;
+def ICMCCmp : SDNode<"ICMCISD::CMP", SDT_ICMCCmp, [SDNPOutGlue]>;
+
+def SDT_ICMCSelectCC
+    : SDTypeProfile<1, 3,
+                    [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>, SDTCisSameAs<2, 3>]>;
+def ICMCselectcc : SDNode<"ICMCISD::SELECT_CC", SDT_ICMCSelectCC, [SDNPInGlue]>;
+
+// leaves to identify types of conditions, used in logical compares
+def ICMC_COND_EQ : PatLeaf<(i16 0)>;
+def ICMC_COND_NE : PatLeaf<(i16 1)>;
+def ICMC_COND_GR : PatLeaf<(i16 2)>;
+def ICMC_COND_LT : PatLeaf<(i16 3)>;
+def ICMC_COND_GE : PatLeaf<(i16 4)>;
+def ICMC_COND_LE : PatLeaf<(i16 5)>;
 
 // generic instruction
 class ICMCInst<string asmStr, dag outs, dag ins, 
@@ -118,8 +141,8 @@ class ICMCALUInstr<bits<6> opcode, string Mnemonic,
 }
 
 class ICMCBranchInstr<bits<6> opcode, bits<4> subOpcode, string Mnemonic,
-                      list<dag> pattern = []>
-    : ICMC32Inst<opcode, Mnemonic # " $imm", (outs), (ins memuimm16:$imm),
+                      dag outs, dag ins, list<dag> pattern = []>
+    : ICMC32Inst<opcode, Mnemonic # " $imm", outs, ins,
                  pattern> {
   let Inst{31-26} = opcode;
   let Inst{25-22} = subOpcode;
@@ -127,10 +150,16 @@ class ICMCBranchInstr<bits<6> opcode, bits<4> subOpcode, string Mnemonic,
 }
 
 class ICMCJumpInstr<bits<4> subOpcode, string Mnemonic, list<dag> pattern = []>
-    : ICMCBranchInstr<0b000010, subOpcode, Mnemonic, pattern>;
+    : ICMCBranchInstr<0b000010, subOpcode, Mnemonic, (outs),
+                      (ins jbb_16:$imm), pattern> {
+  let isBarrier = 1;
+  let isBranch = 1;
+  let isTerminator = 1;
+}
 
 class ICMCCallInstr<bits<4> subOpcode, string Mnemonic, list<dag> pattern = []>
-    : ICMCBranchInstr<0b000011, subOpcode, Mnemonic, pattern> {
+    : ICMCBranchInstr<0b000011, subOpcode, Mnemonic, (outs),
+                      (ins memuimm16:$imm), pattern> {
   let isCall = 1;
 }
 

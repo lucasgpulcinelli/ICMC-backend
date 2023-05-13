@@ -9,6 +9,21 @@
 
 namespace llvm {
 
+
+namespace ICMCCC {
+
+enum CondCodes {
+  COND_EQ, //!< Equal
+  COND_NE, //!< Not equal
+  COND_GT,  //!< Greater than
+  COND_LT, //!< Less than
+  COND_GE, //!< Greater than or equal
+  COND_LE, //!< Less than or equal
+  COND_INVALID
+};
+
+} // end of namespace ICMCCC
+
 class ICMCSubtarget;
 
 class ICMCInstrInfo : public ICMCGenInstrInfo {
@@ -37,6 +52,8 @@ public:
 
   Register scavengeGPR(const TargetRegisterInfo* TRI,
                        MachineBasicBlock::iterator& MI) const;
+
+  const MCInstrDesc &getBrCond(ICMCCC::CondCodes CC) const;
 };
 
 } // end namespace llvm
