@@ -23,16 +23,6 @@ ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::ADDE, MVT::i16, Legal);
   setOperationAction(ISD::SUBE, MVT::i16, Legal);
 
-  setOperationAction(ISD::SRA, MVT::i4, Legal);
-  setOperationAction(ISD::SHL, MVT::i4, Legal);
-  setOperationAction(ISD::ROTL, MVT::i4, Legal);
-  setOperationAction(ISD::ROTR, MVT::i4, Legal);
-
-  setOperationAction(ISD::SRA, MVT::i16, Custom);
-  setOperationAction(ISD::SHL, MVT::i16, Custom);
-  setOperationAction(ISD::ROTL, MVT::i16, Custom);
-  setOperationAction(ISD::ROTR, MVT::i16, Custom);
-
   setOperationAction(ISD::SDIV, MVT::i16, Expand);
   setOperationAction(ISD::SREM, MVT::i16, Expand);
   setOperationAction(ISD::SDIVREM, MVT::i16, Expand);
@@ -45,6 +35,7 @@ ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SETCC, MVT::i16, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i16, Custom);
   setOperationAction(ISD::BR_CC, MVT::i16, Custom);
+  setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
 }
 
 template<typename T>
@@ -435,6 +426,8 @@ SDValue ICMCTargetLowering::LowerOperation(SDValue Op,
     return LowerSELECT_CC(Op, DAG);
   case ISD::BR_CC:
     return LowerBR_CC(Op, DAG);
+  case ISD::GlobalAddress:
+    return LowerGlobalAddress(Op, DAG);
   default:
     llvm_unreachable("LowerOperation not implemented for this opcode!");
   }
@@ -443,18 +436,21 @@ SDValue ICMCTargetLowering::LowerOperation(SDValue Op,
 static ICMCCC::CondCodes intCCToICMCCC(ISD::CondCode CC) {
   switch (CC) {
   default:
-    printf("%d\n", CC);
     llvm_unreachable("Unknown condition code!");
   case ISD::SETEQ:
     return ICMCCC::COND_EQ;
   case ISD::SETNE:
     return ICMCCC::COND_NE;
+  case ISD::SETGT:
   case ISD::SETUGT:
     return ICMCCC::COND_GT;
+  case ISD::SETLT:
   case ISD::SETULT:
     return ICMCCC::COND_LT;
+  case ISD::SETGE:
   case ISD::SETUGE:
     return ICMCCC::COND_GE;
+  case ISD::SETLE:
   case ISD::SETULE:
     return ICMCCC::COND_LE;
   }
@@ -584,4 +580,17 @@ MachineBasicBlock *ICMCTargetLowering::EmitInstrWithCustomInserter(
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
   return trueMBB;
+}
+
+SDValue ICMCTargetLowering::LowerGlobalAddress(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  auto DL = DAG.getDataLayout();
+
+  const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
+  int64_t Offset = cast<GlobalAddressSDNode>(Op)->getOffset();
+
+  // Create the TargetGlobalAddress node, folding in the constant offset.
+  SDValue Result =
+      DAG.getTargetGlobalAddress(GV, SDLoc(Op), getPointerTy(DL), Offset);
+  return DAG.getNode(ICMCISD::WRAPPER, SDLoc(Op), getPointerTy(DL), Result);
 }

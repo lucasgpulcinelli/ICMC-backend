@@ -16,7 +16,8 @@ enum NodeType {
   CALLSEQ_END,
   CMP,
   SELECT_CC,
-  BRCOND
+  BRCOND,
+  WRAPPER
 };
 
 } // end namespace ICMCISD
@@ -76,6 +77,7 @@ private:
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBR_CC(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue getICMCCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                      SDValue &ICMCcc, SelectionDAG &DAG, SDLoc DL) const;

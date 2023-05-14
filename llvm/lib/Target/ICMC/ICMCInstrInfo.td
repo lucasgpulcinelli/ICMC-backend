@@ -146,12 +146,17 @@ def DECFS : ICMCInst<"decfs $imm", (outs), (ins memuimm16:$imm, variable_ops)> {
 def : Pat<(ICMCCallseqEnd i16:$imm, (undef)), (DECFS i16:$imm, R1, R2)>;
 
 let Constraints = "$rs = $rd" in {
-  def ROTL    : ICMCShiftInstr<0b100, "rotl">;
-  def ROTR    : ICMCShiftInstr<0b110, "rotr">;
+  def ROTL    : ICMCShiftInstr<0b100, "rotl", [(set GPR:$rd,
+                               (rotl GPR:$rs, imm:$imm))]>;
+  def ROTR    : ICMCShiftInstr<0b110, "rotr", [(set GPR:$rd,
+                               (rotr GPR:$rs, imm:$imm))]>;
 
-  def SHIFTL0 : ICMCShiftInstr<0b000, "shiftl0">;
+  def SHIFTL0 : ICMCShiftInstr<0b000, "shiftl0", [(set GPR:$rd,
+                               (shl GPR:$rs, imm:$imm))]>;
+  def SHIFTR0 : ICMCShiftInstr<0b010, "shiftr0", [(set GPR:$rd,
+                               (sra GPR:$rs, imm:$imm))]>;
+
   def SHIFTL1 : ICMCShiftInstr<0b001, "shiftl1">;
-  def SHIFTR0 : ICMCShiftInstr<0b010, "shiftr0">;
   def SHIFTR1 : ICMCShiftInstr<0b011, "shiftr1">;
 }
 
@@ -206,4 +211,4 @@ def : Pat<(ICMCcall(i16 tglobaladdr:$dst)), (CALL tglobaladdr:$dst)>;
 def : Pat<(ICMCcall(i16 texternalsym:$dst)), (CALL texternalsym:$dst)>;
 
 // Global addresses
-def : Pat<(globaladdr:$dst), (LOADI memuimm16:$dst)>;
+def : Pat<(ICMCWrapper tglobaladdr:$dst), (LOADN memuimm16:$dst)>;
