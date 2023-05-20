@@ -38,6 +38,25 @@ ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
 }
 
+const char *ICMCTargetLowering::getTargetNodeName(unsigned Opcode) const {
+#define NODE(name)                                                             \
+  case ICMCISD::name:                                                          \
+    return #name
+
+  switch (Opcode) {
+  default:
+    return nullptr;
+  NODE(RET_FLAG);
+  NODE(CALL);
+  NODE(CALLSEQ_END);
+  NODE(CMP);
+  NODE(SELECT_CC);
+  NODE(BRCOND);
+  NODE(WRAPPER);
+#undef NODE
+  }
+}
+
 template<typename T>
 void ICMCTargetLowering::analyzeArguments(
     const Function *F, const DataLayout *TD,
@@ -370,7 +389,6 @@ ICMCTargetLowering::getRegForInlineAsmConstraint(
 ICMCTargetLowering::ConstraintType
 ICMCTargetLowering::getConstraintType(StringRef Constraint) const {
   if (Constraint.size() == 1) {
-    // See http://www.nongnu.org/avr-libc/user-manual/inline_asm.html
     switch (Constraint[0]) {
     default:
       break;

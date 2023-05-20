@@ -181,7 +181,7 @@ struct ICMCFrameAnalyzer : public MachineFunctionPass {
     return false;
   }
 
-  StringRef getPassName() const override { return "AVR Frame Analyzer"; }
+  StringRef getPassName() const override { return "ICMC Frame Analyzer"; }
 };
 
 char ICMCFrameAnalyzer::ID = 0;

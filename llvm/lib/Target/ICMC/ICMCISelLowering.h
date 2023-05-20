@@ -33,6 +33,8 @@ public:
   explicit ICMCTargetLowering(const TargetMachine &TM,
                              const ICMCSubtarget &Subtarget);
 
+  const char *getTargetNodeName(unsigned Opcode) const override;
+
   template<typename T>
   static void analyzeArguments(const Function *F, const DataLayout *TD,
                                const SmallVectorImpl<T> &Args,
