@@ -569,7 +569,7 @@ void IRPromoter::TruncateSinks() {
 void IRPromoter::Cleanup() {
   LLVM_DEBUG(dbgs() << "IR Promotion: Cleanup..\n");
   // Some zexts will now have become redundant, along with their trunc
-  // operands, so remove them
+  // operands, so remove them.
   for (auto *V : Visited) {
     if (!isa<ZExtInst>(V))
       continue;
@@ -620,6 +620,8 @@ void IRPromoter::ConvertTruncs() {
     ConstantInt *Mask =
         ConstantInt::get(SrcTy, APInt::getMaxValue(NumBits).getZExtValue());
     Value *Masked = Builder.CreateAnd(Trunc->getOperand(0), Mask);
+    if (SrcTy != ExtTy)
+      Masked = Builder.CreateTrunc(Masked, ExtTy);
 
     if (auto *I = dyn_cast<Instruction>(Masked))
       NewInsts.insert(I);
