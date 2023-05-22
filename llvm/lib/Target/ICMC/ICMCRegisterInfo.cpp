@@ -1,4 +1,6 @@
+#include "ICMCMachineFunctionInfo.h"
 #include "ICMCRegisterInfo.h"
+#include "ICMCTargetMachine.h"
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -25,32 +27,41 @@ ICMCRegisterInfo::ICMCRegisterInfo(const ICMCSubtarget &ST)
 const MCPhysReg *ICMCRegisterInfo::getCalleeSavedRegs(
       const MachineFunction *MF) const {
 
-    llvm_unreachable("getCalleeSavedRegs not implemented");
+  return CSR_Normal_SaveList;
 }
 
 BitVector ICMCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
-    llvm_unreachable("getReservedRegs not implemented");
+  BitVector Reserved(getNumRegs());
+
+  Reserved.set(ICMC::SP);
+
+  return Reserved;
 }
 
-bool ICMCRegisterInfo::requiresRegisterScavenging(
-      const MachineFunction &MF) const {
-    llvm_unreachable("requiresRegisterScavenging not implemented");
-}
-
-bool ICMCRegisterInfo::useFPForScavengingIndex(
-      const MachineFunction &MF) const {
-    llvm_unreachable("useFPForScavengingIndex not implemented");
-}
 
 void ICMCRegisterInfo::eliminateFrameIndex(
       MachineBasicBlock::iterator II, int SPAdj, unsigned FIOperandNum,
       RegScavenger *RS) const {
-    llvm_unreachable("eliminateFrameIndex not implemented");
+
+  MachineInstr &MI = *II;
+  MachineBasicBlock &MBB = *MI.getParent();
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  const ICMCTargetMachine &TM = (const ICMCTargetMachine &)MF.getTarget();
+  const TargetFrameLowering *TFI = TM.getSubtargetImpl()->getFrameLowering();
+
+  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+  int Offset = MFI.getObjectOffset(FrameIndex);
+
+  Offset += MFI.getStackSize() - TFI->getOffsetOfLocalArea() + 2;
+
+  MI.getOperand(FIOperandNum).ChangeToImmediate(Offset/2);
 }
 
 const uint32_t *ICMCRegisterInfo::getCallPreservedMask(
       const MachineFunction &MF, CallingConv::ID CC) const {
-    llvm_unreachable("getCallPreservedMask not implemented");
+  return CSR_Normal_RegMask;
 }
 
 Register ICMCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {

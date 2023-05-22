@@ -1,6 +1,8 @@
+#include "ICMCFrameLowering.h"
 #include "ICMCTargetMachine.h"
-#include "TargetInfo/ICMCTargetInfo.h"
 #include "ICMCISelDAGToDAG.h"
+#include "ICMCTargetObjectFile.h"
+#include "TargetInfo/ICMCTargetInfo.h"
 
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -21,6 +23,7 @@ ICMCTargetMachine::ICMCTargetMachine(const Target &T, const Triple &TT,
                           RM.value_or(Reloc::Static),
                           getEffectiveCodeModel(CM, CodeModel::Small), OL),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {
+  this->TLOF = std::make_unique<ICMCTargetObjectFile>();
   initAsmInfo();
 }
 
@@ -36,6 +39,7 @@ public:
   }
 
   bool addInstSelector() override;
+  void addPreSched2() override;
 };
 } // namespace
 
@@ -45,10 +49,18 @@ TargetPassConfig *ICMCTargetMachine::createPassConfig(PassManagerBase &PM) {
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeICMCTarget(){
   RegisterTargetMachine<ICMCTargetMachine> X(getTheICMCTarget());
+
+  auto &PR = *PassRegistry::getPassRegistry();
+  initializeICMCExpandPseudoPass(PR);
 }
 
 bool ICMCPassConfig::addInstSelector() {
   addPass(createICMCISelDag(getICMCTargetMachine(), getOptLevel()));
+  addPass(createICMCFrameAnalyzerPass());
   return false;
+}
+
+void ICMCPassConfig::addPreSched2() {
+  addPass(createICMCExpandPseudoPass());
 }
 

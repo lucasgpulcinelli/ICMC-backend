@@ -16,8 +16,14 @@ class AsmPrinter;
 class LLVM_LIBRARY_VISIBILITY ICMCMCInstLower {
 
 public:
-  ICMCMCInstLower(MCContext *C, AsmPrinter &asmprinter);
-  void Lower(const MachineInstr *MI, MCInst &OutMI) const;
+  ICMCMCInstLower(MCContext& Ctx, AsmPrinter &Printer)
+      : Ctx(Ctx), Printer(Printer) {}
+  void lower(const MachineInstr *MI, MCInst &OutMI) const;
+  MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const;
+
+private:
+  MCContext& Ctx;
+  AsmPrinter& Printer;
 };
 
 } // end namespace llvm

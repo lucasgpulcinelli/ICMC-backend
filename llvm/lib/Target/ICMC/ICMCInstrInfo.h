@@ -9,6 +9,21 @@
 
 namespace llvm {
 
+
+namespace ICMCCC {
+
+enum CondCodes {
+  COND_EQ, //!< Equal
+  COND_NE, //!< Not equal
+  COND_GT,  //!< Greater than
+  COND_LT, //!< Less than
+  COND_GE, //!< Greater than or equal
+  COND_LE, //!< Less than or equal
+  COND_INVALID
+};
+
+} // end of namespace ICMCCC
+
 class ICMCSubtarget;
 
 class ICMCInstrInfo : public ICMCGenInstrInfo {
@@ -19,6 +34,26 @@ public:
   ICMCInstrInfo(const ICMCSubtarget &);
 
   const ICMCRegisterInfo &getRegisterInfo() const { return RI; }
+  void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   bool KillSrc) const override;
+
+  void loadRegFromStackSlot(MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MI,
+                            Register DestReg, int FrameIndex,
+                            const TargetRegisterClass *RC,
+                            const TargetRegisterInfo *TRI) const override;
+
+  void storeRegToStackSlot(MachineBasicBlock &MBB,
+                           MachineBasicBlock::iterator MI, Register SrcReg,
+                           bool isKill, int FrameIndex,
+                           const TargetRegisterClass *RC,
+                           const TargetRegisterInfo *TRI) const override;
+
+  Register scavengeGPR(const TargetRegisterInfo* TRI,
+                       MachineBasicBlock::iterator& MI) const;
+
+  const MCInstrDesc &getBrCond(ICMCCC::CondCodes CC) const;
 };
 
 } // end namespace llvm

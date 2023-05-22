@@ -19,13 +19,24 @@ public:
     return "ICMC DAG->DAG Pattern Instruction Selection";
   }
 
+  bool SelectSPmem(SDValue Addr, SDValue &Offset);
+
   #include "ICMCGenDAGISel.inc"
 };
 
 } // end anonymous namespace
 
 void ICMCDAGToDAGISel::Select(SDNode *N) {
-    llvm_unreachable("Select not Implemented");
+  SelectCode(N);
+}
+
+bool ICMCDAGToDAGISel::SelectSPmem(SDValue Addr, SDValue &Offset){
+  FrameIndexSDNode *FIN = nullptr;
+  if ((FIN = dyn_cast<FrameIndexSDNode>(Addr))) {
+    Offset = CurDAG->getTargetFrameIndex(FIN->getIndex(), MVT::i16);
+    return true;
+  }
+  return false;
 }
 
 FunctionPass *llvm::createICMCISelDag(ICMCTargetMachine &TM,
