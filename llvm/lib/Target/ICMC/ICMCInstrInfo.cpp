@@ -103,8 +103,8 @@ void ICMCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 }
 
 
-Register ICMCInstrInfo::scavengeGPR(const TargetRegisterInfo* TRI,
-    MachineBasicBlock::iterator &MI) const {
+Register llvm::scavengeGPR(const TargetRegisterInfo* TRI,
+    MachineBasicBlock::iterator &MI) {
   MachineBasicBlock *MBB = MI->getParent();
   RegScavenger RS;
 

@@ -50,11 +50,11 @@ public:
                            const TargetRegisterClass *RC,
                            const TargetRegisterInfo *TRI) const override;
 
-  Register scavengeGPR(const TargetRegisterInfo* TRI,
-                       MachineBasicBlock::iterator& MI) const;
-
   const MCInstrDesc &getBrCond(ICMCCC::CondCodes CC) const;
 };
+
+Register scavengeGPR(const TargetRegisterInfo* TRI,
+                     MachineBasicBlock::iterator& MI);
 
 } // end namespace llvm
 

@@ -76,12 +76,14 @@ def POP  : ICMC1Reg16Instr<0b000110, "pop"> {
 }
 
 def LOADN  : ICMCLoadStoreInstr<0b111000, "loadn $reg, $imm", (outs GPR:$reg),
-    (ins uimm16:$imm), [(set GPR:$reg, (load uimm16:$imm))]> {
+    (ins uimm16:$imm), [(set GPR:$reg, imm:$imm)]> {
   let mayLoad = 1;
 }
 
-// Patterns for loading constants in registers
-def : Pat<(uimm16:$imm), (LOADN uimm16:$imm)>;
+def FRIDX : ICMCInst<"frameindex PSEUDO", (outs GPR:$rd), (ins uimm16:$imm)> {
+  let Uses = [SP];
+  let isPseudo = 1;
+}
 
 def LOAD  : ICMCLoadStoreInstr<0b110000, "load $reg, $imm", (outs GPR:$reg), 
     (ins memuimm16:$imm), [(set GPR:$reg, (load memuimm16:$imm))]> {
@@ -98,7 +100,7 @@ def LOADI  : ICMC2Regs16Instr<0b111100, "loadi", [(set GPR:$rd, (load GPR:$rs))]
   let mayLoad = 1;
 }
 
-def STOREI : ICMC2Regs16Instr<0b111101, "storei", [(store GPR:$rd, GPR:$rs)]> {
+def STOREI : ICMC2Regs16Instr<0b111101, "storei", [(store GPR:$rs, GPR:$rd)]> {
   let mayStore = 1;
   let InOperandList = (ins GPR:$rd, GPR:$rs);
   let OutOperandList = (outs);

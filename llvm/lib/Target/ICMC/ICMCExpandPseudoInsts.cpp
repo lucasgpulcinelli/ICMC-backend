@@ -38,6 +38,7 @@ private:
 
   bool expandINCDECFS(Block &MBB, BlockIt MBBI, MachineInstr &MI,
                       bool IsIncrement);
+  bool expandFRIDX(Block &MBB, BlockIt MBBI, MachineInstr &MI);
 };
 
 char ICMCExpandPseudo::ID = 0;
@@ -103,6 +104,22 @@ bool ICMCExpandPseudo::expandINCDECFS(Block &MBB, BlockIt MBBI,
   return true;
 }
 
+bool ICMCExpandPseudo::expandFRIDX(Block &MBB, BlockIt MBBI, MachineInstr &MI){
+  buildMI(MBB, MBBI, ICMC::MOVGetSP, MI.getOperand(0).getReg());
+
+  Register TmpReg = scavengeGPR(TRI, MBBI);
+  buildMI(MBB, MBBI, ICMC::LOADN, TmpReg)
+    .addImm(MI.getOperand(1).getImm());
+
+  buildMI(MBB, MBBI, ICMC::ADD, MI.getOperand(0).getReg())
+    .addReg(TmpReg)
+    .addReg(MI.getOperand(0).getReg());
+
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool ICMCExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   int Opcode = MBBI->getOpcode();
@@ -111,6 +128,8 @@ bool ICMCExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
   case ICMC::DECFS:
   case ICMC::INCFS:
     return expandINCDECFS(MBB, MBBI, MI, Opcode == ICMC::INCFS);
+  case ICMC::FRIDX:
+    return expandFRIDX(MBB, MBBI, MI);
   default:
     return false;
   }
