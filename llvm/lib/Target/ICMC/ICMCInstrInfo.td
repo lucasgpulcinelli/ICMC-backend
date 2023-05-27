@@ -106,6 +106,11 @@ def STOREI : ICMC2Regs16Instr<0b111101, "storei", [(store GPR:$rs, GPR:$rd)]> {
   let OutOperandList = (outs);
 }
 
+// TODO: this clearly is only a workaround for arrays of ints, as loads and
+// stores take words as parameters instead of bytes
+def : Pat<(add spmem:$imm, (shl GPR:$rd, 1)),
+          (ADD (FRIDX spmem:$imm), GPR:$rd)>;
+
 def MOV : ICMC2Regs16Instr<0b110011, "mov">;
 def MOVGetSP : ICMC16Inst<0b110011, "mov $rd, sp", (outs GPR:$rd), (ins)> {
   bits<3> rd;

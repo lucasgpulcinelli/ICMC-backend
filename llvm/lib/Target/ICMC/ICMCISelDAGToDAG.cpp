@@ -30,31 +30,8 @@ private:
 } // end anonymous namespace
 
 void ICMCDAGToDAGISel::Select(SDNode *N) {
-  switch(N->getOpcode()){
-  case ISD::FrameIndex:
-    selectFrameIndex(N);
-    return;
-  default:
-    break;
-  }
-
   SelectCode(N);
 }
-
-bool ICMCDAGToDAGISel::selectFrameIndex(SDNode *N) {
-  auto DL = CurDAG->getDataLayout();
-
-  // Convert the frameindex into a temp instruction that will hold the
-  // effective address of the final stack slot.
-  int FI = cast<FrameIndexSDNode>(N)->getIndex();
-  SDValue TFI =
-      CurDAG->getTargetFrameIndex(FI, getTargetLowering()->getPointerTy(DL));
-
-  CurDAG->SelectNodeTo(N, ICMC::FRIDX, getTargetLowering()->getPointerTy(DL),
-                       TFI);
-  return true;
-}
-
 
 bool ICMCDAGToDAGISel::SelectSPmem(SDValue Addr, SDValue &Offset){
   FrameIndexSDNode *FIN = nullptr;
