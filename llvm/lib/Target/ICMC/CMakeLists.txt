@@ -16,7 +16,6 @@ add_public_tablegen_target(ICMCCommonTableGen)
 
 add_llvm_target(ICMCCodeGen
   ICMCTargetObjectFile.cpp
-  ICMCMCExpr.cpp
   ICMCExpandPseudoInsts.cpp
   ICMCInstrInfo.cpp
   ICMCRegisterInfo.cpp

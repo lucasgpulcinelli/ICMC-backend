@@ -12,6 +12,10 @@ FunctionPass *createICMCExpandPseudoPass();
 
 class TargetPassConfig;
 
+/*
+ * ICMCTargetMachine: defines how IR is converted to object file. The driver of
+ * the compilation process.
+ */
 class ICMCTargetMachine : public LLVMTargetMachine {
 private:
   ICMCSubtarget Subtarget;
@@ -28,15 +32,14 @@ public:
     return &Subtarget;
   }
 
+  // defines all passes necessary for compilation
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return this->TLOF.get();
   }
-
 };
 
 } // end namespace llvm
 
 #endif
-
