@@ -7,7 +7,7 @@ namespace llvm {
 
 /*
  * ICMCInstPrinter: define how instructions can be printed via their MCInst
- * representations, used to define llvm-objdump -d or clang -S outputs.
+ * representations, used to define the clang -S output.
  */
 class ICMCInstPrinter : public MCInstPrinter {
 public:
