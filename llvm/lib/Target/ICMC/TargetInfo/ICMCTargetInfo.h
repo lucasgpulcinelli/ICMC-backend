@@ -5,7 +5,6 @@ namespace llvm {
 class Target;
 
 Target &getTheICMCTarget();
-}
+} // end namespace llvm
 
 #endif
-

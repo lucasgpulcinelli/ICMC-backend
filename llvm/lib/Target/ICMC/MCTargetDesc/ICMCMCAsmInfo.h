@@ -7,6 +7,9 @@ namespace llvm {
 
 class Triple;
 
+/*
+ * ICMCMCAsmInfo: define the general assembly patterns, used in clang -S.
+ */
 class ICMCMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit ICMCMCAsmInfo(const Triple &TT);
@@ -15,4 +18,3 @@ public:
 } // end namespace llvm
 
 #endif
-

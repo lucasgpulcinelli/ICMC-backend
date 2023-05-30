@@ -5,11 +5,9 @@
 
 #include <memory>
 
-
 namespace llvm {
 
 class MCObjectTargetWriter;
-
 
 std::unique_ptr<MCObjectTargetWriter> createICMCELFObjectWriter(uint8_t OSABI);
 

@@ -2,10 +2,9 @@
 
 #include "llvm/ADT/Triple.h"
 
-
 using namespace llvm;
 
-ICMCMCAsmInfo::ICMCMCAsmInfo(const Triple &TT){
+ICMCMCAsmInfo::ICMCMCAsmInfo(const Triple &TT) {
   CodePointerSize = 2;
   CalleeSaveStackSlotSize = 2;
   CommentString = ";";
@@ -14,4 +13,3 @@ ICMCMCAsmInfo::ICMCMCAsmInfo(const Triple &TT){
   UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
 }
-

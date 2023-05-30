@@ -23,6 +23,6 @@ void ICMCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
 }
 
 const char *ICMCInstPrinter::getPrettyRegisterName(unsigned RegNo,
-                                         MCRegisterInfo const &MRI) {
+                                                   MCRegisterInfo const &MRI) {
   return getRegisterName(RegNo);
 }
