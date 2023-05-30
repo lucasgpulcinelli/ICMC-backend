@@ -1,27 +1,35 @@
 #include "ICMCInstrInfo.h"
+#include "ICMCMCExpr.h"
 #include "ICMCRegisterInfo.h"
 #include "MCTargetDesc/ICMCMCTargetDesc.h"
 #include "TargetInfo/ICMCTargetInfo.h"
-#include "ICMCMCExpr.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
-
 
 using namespace llvm;
 
 namespace {
+
+/*
+ * ICMCAsmParser: defines how to read an assembly file and generate MCInsts from
+ * it.
+ */
 class ICMCAsmParser : public MCTargetAsmParser {
   const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
   const MCRegisterInfo *MRI;
 
-  #define GET_ASSEMBLER_HEADER
-  #include "ICMCGenAsmMatcher.inc"
+#define GET_ASSEMBLER_HEADER
+#include "ICMCGenAsmMatcher.inc"
+
+  // tryParseXOperand returns false if it could parse an operand of a certain
+  // kind, consuming the tokens until the end of the X definition. Used in
+  // parseOperand.
 
   bool tryParseRegisterOperand(OperandVector &Operands);
   bool tryParseExpression(OperandVector &Operands);
@@ -29,7 +37,7 @@ class ICMCAsmParser : public MCTargetAsmParser {
 
 public:
   ICMCAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-               const MCInstrInfo &MII, const MCTargetOptions &Options)
+                const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
     MRI = getContext().getRegisterInfo();
@@ -37,21 +45,26 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
-                             SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+                                        SMLoc &EndLoc) override;
 
-  OperandMatchResultTy
-  tryParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
 
+  // parse a full instruction and all it's operands, called by
+  // MatchInstructionImpl
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
+  // parse an operand of an instruction, used in ParseInstruction
   bool parseOperand(OperandVector &Operands);
 
+  // parse operands for the STATIC instruction, used in ParseInstruction
   bool parseStaticOperands(OperandVector &Operands);
 
   bool ParseDirective(AsmToken DirectiveID) override;
 
+  // matches an instruction, generates an MCInst and emit it to the MCStreamer
+  // to generate the final object
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
@@ -61,6 +74,9 @@ public:
   MCAsmLexer &getLexer() const { return Parser.getLexer(); }
 };
 
+/*
+ * ICMCOperand: defines all kinds of operands for exclusive use in the AsmParser
+ */
 class ICMCOperand : public MCParsedAsmOperand {
 private:
   enum KindTy { k_Immediate, k_Register, k_Token, k_Memri } Kind;
@@ -78,36 +94,28 @@ public:
       : Kind(k_Token), Token(Token), Start(S), End(S) {}
   ICMCOperand(unsigned Register, SMLoc const &S, SMLoc const &E)
       : Kind(k_Register), Register(Register), Start(S), End(E) {}
-  ICMCOperand(const MCExpr* Imm, SMLoc const &S, SMLoc const &E)
+  ICMCOperand(const MCExpr *Imm, SMLoc const &S, SMLoc const &E)
       : Kind(k_Immediate), Imm(Imm), Start(S), End(E) {}
 
-
-  static std::unique_ptr<ICMCOperand> CreateToken(StringRef Str, SMLoc S) {
+  static std::unique_ptr<ICMCOperand> createToken(StringRef Str, SMLoc S) {
     return std::make_unique<ICMCOperand>(Str, S);
   }
 
-  static std::unique_ptr<ICMCOperand> CreateReg(unsigned RegNum, SMLoc S,
-                                               SMLoc E) {
+  static std::unique_ptr<ICMCOperand> createReg(unsigned RegNum, SMLoc S,
+                                                SMLoc E) {
     return std::make_unique<ICMCOperand>(RegNum, S, E);
   }
 
-  static std::unique_ptr<ICMCOperand> CreateImm(const MCExpr* Imm, SMLoc S,
-                                               SMLoc E) {
+  static std::unique_ptr<ICMCOperand> createImm(const MCExpr *Imm, SMLoc S,
+                                                SMLoc E) {
     return std::make_unique<ICMCOperand>(Imm, S, E);
   }
 
+  bool isToken() const override { return Kind == k_Token; }
 
-  bool isToken() const override {
-    return Kind == k_Token;
-  }
+  bool isImm() const override { return Kind == k_Immediate; }
 
-  bool isImm() const override {
-    return Kind == k_Immediate;
-  }
-
-  bool isReg() const override {
-    return Kind == k_Register;
-  }
+  bool isReg() const override { return Kind == k_Register; }
 
   unsigned getReg() const override {
     if (Kind != k_Register) {
@@ -117,17 +125,11 @@ public:
     return Register;
   }
 
-  bool isMem() const override {
-    return Kind == k_Memri;
-  }
+  bool isMem() const override { return Kind == k_Memri; }
 
-  SMLoc getStartLoc() const override {
-    return Start;
-  }
+  SMLoc getStartLoc() const override { return Start; }
 
-  SMLoc getEndLoc() const override {
-    return End;
-  }
+  SMLoc getEndLoc() const override { return End; }
 
   void print(raw_ostream &OS) const override {
     switch (Kind) {
@@ -183,37 +185,34 @@ public:
 };
 } // end anonymous namespace.
 
-
 #define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #include "ICMCGenAsmMatcher.inc"
-
 
 bool ICMCAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
                                   SMLoc &EndLoc) {
   llvm_unreachable("ParseRegister not implemented");
 }
 
-OperandMatchResultTy
-ICMCAsmParser::tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
-                                SMLoc &EndLoc) {
+OperandMatchResultTy ICMCAsmParser::tryParseRegister(unsigned &RegNo,
+                                                     SMLoc &StartLoc,
+                                                     SMLoc &EndLoc) {
   llvm_unreachable("tryParseRegister not implemented");
 }
 
-bool ICMCAsmParser::ParseInstruction(
-      ParseInstructionInfo &Info, StringRef Name, SMLoc NameLoc,
-      OperandVector &Operands) {
+bool ICMCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+                                     SMLoc NameLoc, OperandVector &Operands) {
 
-  Operands.push_back(ICMCOperand::CreateToken(Name, NameLoc));
+  Operands.push_back(ICMCOperand::createToken(Name, NameLoc));
 
-  if(getLexer().is(AsmToken::EndOfStatement)){
+  if (getLexer().is(AsmToken::EndOfStatement)) {
     Parser.Lex();
     return false;
   }
 
   // the static instruction has a different syntax and uses ICMCMCExpr
-  if(Name == "static"){
-    if(parseStaticOperands(Operands)){
+  if (Name == "static") {
+    if (parseStaticOperands(Operands)) {
       return true;
     }
     Parser.Lex();
@@ -228,7 +227,7 @@ bool ICMCAsmParser::ParseInstruction(
 
     // if we reach the end of statement, no comma is permitted
     if (getLexer().is(AsmToken::EndOfStatement)) {
-        break;
+      break;
     }
 
     // but if there are more tokens, make sure there is a comma separating them
@@ -246,7 +245,7 @@ bool ICMCAsmParser::ParseInstruction(
   return false;
 }
 
-bool ICMCAsmParser::parseStaticOperands(OperandVector& Operands) {
+bool ICMCAsmParser::parseStaticOperands(OperandVector &Operands) {
   uint16_t Offset, SubstValue;
 
   StringRef Identifier;
@@ -262,8 +261,7 @@ bool ICMCAsmParser::parseStaticOperands(OperandVector& Operands) {
 
   getLexer().peekTokens(Buf);
 
-  if (Buf[0].isNot(AsmToken::Hash) ||
-      Buf[2].isNot(AsmToken::Comma)  ||
+  if (Buf[0].isNot(AsmToken::Hash) || Buf[2].isNot(AsmToken::Comma) ||
       Buf[3].isNot(AsmToken::Hash)) {
     return true;
   }
@@ -272,11 +270,12 @@ bool ICMCAsmParser::parseStaticOperands(OperandVector& Operands) {
   SubstValue = Buf[4].getIntVal();
 
   SMLoc SMem = Parser.getTok().getLoc();
-  SMLoc EMem = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer()-1);
+  SMLoc EMem = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
-  const ICMCMCExpr* Res = ICMCMCExpr::create(getContext(), Sym, Offset, SubstValue);
+  const ICMCMCExpr *Res =
+      ICMCMCExpr::create(getContext(), Sym, Offset, SubstValue);
 
-  Operands.push_back(ICMCOperand::CreateImm(Res, SMem, EMem));
+  Operands.push_back(ICMCOperand::createImm(Res, SMem, EMem));
 
   return false;
 }
@@ -284,7 +283,7 @@ bool ICMCAsmParser::parseStaticOperands(OperandVector& Operands) {
 bool ICMCAsmParser::parseOperand(OperandVector &Operands) {
   switch (getLexer().getKind()) {
   case AsmToken::Identifier:
-    //register name or label
+    // register name or label
     if (!tryParseRegisterOperand(Operands)) {
       return false;
     }
@@ -317,7 +316,7 @@ bool ICMCAsmParser::tryParseExpression(OperandVector &Operands) {
 
   SMLoc S = Parser.getTok().getLoc();
   SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-  Operands.push_back(ICMCOperand::CreateImm(Expression, S, E));
+  Operands.push_back(ICMCOperand::createImm(Expression, S, E));
   return false;
 }
 
@@ -328,18 +327,18 @@ bool ICMCAsmParser::tryParseSymbolref(OperandVector &Operands) {
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
 
-  const MCExpr *Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None,
-                                              getContext());
+  const MCExpr *Res =
+      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
 
   SMLoc S = Parser.getTok().getLoc();
   SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-  Operands.push_back(ICMCOperand::CreateImm(Res, S, E));
+  Operands.push_back(ICMCOperand::createImm(Res, S, E));
   return false;
 }
 
 bool ICMCAsmParser::tryParseRegisterOperand(OperandVector &Operands) {
-  if(Parser.getTok().isNot(AsmToken::Identifier)){
-      return true;
+  if (Parser.getTok().isNot(AsmToken::Identifier)) {
+    return true;
   }
 
   // try to match with a register name as defined in tablegen
@@ -352,19 +351,19 @@ bool ICMCAsmParser::tryParseRegisterOperand(OperandVector &Operands) {
   }
 
   AsmToken const &T = Parser.getTok();
-  Operands.push_back(ICMCOperand::CreateReg(RegNo, T.getLoc(), T.getEndLoc()));
+  Operands.push_back(ICMCOperand::createReg(RegNo, T.getLoc(), T.getEndLoc()));
   Parser.Lex(); // consume the token for the register, we just used it.
 
   return false;
 }
 
-bool ICMCAsmParser::ParseDirective(AsmToken DirectiveID) {
-  return true;
-}
+bool ICMCAsmParser::ParseDirective(AsmToken DirectiveID) { return true; }
 
-bool ICMCAsmParser::MatchAndEmitInstruction(
-      SMLoc Loc, unsigned &Opcode, OperandVector &Operands, MCStreamer &Out,
-      uint64_t &ErrorInfo, bool MatchingInlineAsm) {
+bool ICMCAsmParser::MatchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
+                                            OperandVector &Operands,
+                                            MCStreamer &Out,
+                                            uint64_t &ErrorInfo,
+                                            bool MatchingInlineAsm) {
 
   MCInst Inst;
   unsigned MatchResult =
@@ -387,7 +386,8 @@ bool ICMCAsmParser::MatchAndEmitInstruction(
   }
 }
 
+// one of the initialization functions, gives the information on how to generate
+// MCInsts from and assembly file.
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeICMCAsmParser() {
   RegisterMCAsmParser<ICMCAsmParser> X(getTheICMCTarget());
 }
-
