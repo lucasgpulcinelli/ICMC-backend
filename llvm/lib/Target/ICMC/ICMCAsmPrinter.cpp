@@ -1,16 +1,21 @@
-#include "TargetInfo/ICMCTargetInfo.h"
 #include "ICMCMCInstLower.h"
 #include "ICMCTargetMachine.h"
 #include "MCTargetDesc/ICMCInstrPrinter.h"
+#include "TargetInfo/ICMCTargetInfo.h"
 
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
 namespace {
 
+/*
+ * ICMCAsmPrinter: defines the assembly printer, aka the class responsible for
+ * driving the clang -S process and inline assembly in C. Calls the instruction
+ * printer and TargetStreamer.
+ */
 class ICMCAsmPrinter : public AsmPrinter {
   ICMCMCInstLower MCInstLowering;
   const MCRegisterInfo &MRI;
@@ -32,7 +37,6 @@ public:
 
 } // end anonymous namespace
 
-
 void ICMCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MCInst I;
   MCInstLowering.lower(MI, I);
@@ -43,17 +47,17 @@ bool ICMCAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return AsmPrinter::runOnMachineFunction(MF);
 }
 
-
+// PrintAsmOperand drives the inline assembly operand substitution process
 bool ICMCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
-                     const char *ExtraCode, raw_ostream &O) {
+                                     const char *ExtraCode, raw_ostream &O) {
   bool Error = AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O);
 
-  if(Error){
-    const MachineOperand& MO = MI->getOperand(OpNum);
+  if (Error) {
+    const MachineOperand &MO = MI->getOperand(OpNum);
 
-    if(MO.isReg()){
+    if (MO.isReg()) {
       O << ICMCInstPrinter::getPrettyRegisterName(MO.getReg(), MRI);
-    }else if(MO.isImm()){
+    } else if (MO.isImm()) {
       O << '#' << MO.getImm();
     } else {
       llvm_unreachable("kind of operand not supported in inline asm!");
@@ -63,7 +67,8 @@ bool ICMCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
   return false;
 }
 
+// one of the initialization functions, gives information on the assembly
+// printer
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeICMCAsmPrinter() {
   RegisterAsmPrinter<ICMCAsmPrinter> X(getTheICMCTarget());
 }
-

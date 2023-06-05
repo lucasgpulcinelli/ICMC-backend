@@ -10,6 +10,13 @@ using namespace llvm;
 
 namespace {
 
+/*
+ * ICMCExpandPseudo: defines how pseudo instructions (Instructions in the
+ * tablegen defined with IsPseudo=1, meaning instructions that can be treated as
+ * atomic, but are actually a list of correlated operations) are expanded.
+ * This is the final compilation step before turning MCInsts into binary output
+ * code.
+ */
 class ICMCExpandPseudo : public MachineFunctionPass {
 public:
   static char ID;
@@ -86,17 +93,19 @@ bool ICMCExpandPseudo::expandMBB(Block &MBB) {
   return Modified;
 }
 
+// INC and DEC Frame Size are just LOADN of the frame size, a MOVGetSP, an
+// ADD or SUB, and a MOVSetSP. This is ideal if the frame size is greater than 5
 bool ICMCExpandPseudo::expandINCDECFS(Block &MBB, BlockIt MBBI,
-                                      MachineInstr &MI, bool IsIncrement){
+                                      MachineInstr &MI, bool IsIncrement) {
   buildMI(MBB, MBBI, ICMC::LOADN, MI.getOperand(1).getReg())
-    .addImm(MI.getOperand(0).getImm());
+      .addImm(MI.getOperand(0).getImm());
 
   buildMI(MBB, MBBI, ICMC::MOVGetSP, MI.getOperand(2).getReg());
 
-  buildMI(MBB, MBBI, (IsIncrement)? ICMC::SUB : ICMC::ADD,
-      MI.getOperand(1).getReg())
-    .addReg(MI.getOperand(2).getReg(), RegState::Kill)
-    .addReg(MI.getOperand(1).getReg());
+  buildMI(MBB, MBBI, (IsIncrement) ? ICMC::SUB : ICMC::ADD,
+          MI.getOperand(1).getReg())
+      .addReg(MI.getOperand(2).getReg(), RegState::Kill)
+      .addReg(MI.getOperand(1).getReg());
 
   buildMI(MBB, MBBI, ICMC::MOVSetSP, MI.getOperand(1).getReg());
 
@@ -104,17 +113,16 @@ bool ICMCExpandPseudo::expandINCDECFS(Block &MBB, BlockIt MBBI,
   return true;
 }
 
-bool ICMCExpandPseudo::expandFRIDX(Block &MBB, BlockIt MBBI, MachineInstr &MI){
+// FRIDX is just a MOVGetSP, a LOADN of the frame index, and an ADD
+bool ICMCExpandPseudo::expandFRIDX(Block &MBB, BlockIt MBBI, MachineInstr &MI) {
   buildMI(MBB, MBBI, ICMC::MOVGetSP, MI.getOperand(0).getReg());
 
   Register TmpReg = scavengeGPR(TRI, MBBI);
-  buildMI(MBB, MBBI, ICMC::LOADN, TmpReg)
-    .addImm(MI.getOperand(1).getImm());
+  buildMI(MBB, MBBI, ICMC::LOADN, TmpReg).addImm(MI.getOperand(1).getImm());
 
   buildMI(MBB, MBBI, ICMC::ADD, MI.getOperand(0).getReg())
-    .addReg(TmpReg)
-    .addReg(MI.getOperand(0).getReg());
-
+      .addReg(TmpReg)
+      .addReg(MI.getOperand(0).getReg());
 
   MI.eraseFromParent();
   return true;
@@ -124,13 +132,14 @@ bool ICMCExpandPseudo::expandMI(Block &MBB, BlockIt MBBI) {
   MachineInstr &MI = *MBBI;
   int Opcode = MBBI->getOpcode();
 
-  switch(Opcode){
+  switch (Opcode) {
   case ICMC::DECFS:
   case ICMC::INCFS:
     return expandINCDECFS(MBB, MBBI, MI, Opcode == ICMC::INCFS);
   case ICMC::FRIDX:
     return expandFRIDX(MBB, MBBI, MI);
   default:
+    // if the opcode is not a pseudo, we don't do anything
     return false;
   }
 }

@@ -3,8 +3,8 @@
 #include "ICMCMachineFunctionInfo.h"
 #include "ICMCSubtarget.h"
 
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -18,18 +18,18 @@ void ICMCFrameLowering::emitPrologue(MachineFunction &MF,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned FrameSize = MFI.getStackSize() - FI->getCalleeSavedFrameSize();
 
-  if(!hasFP(MF)){
+  if (!hasFP(MF)) {
     return;
   }
 
-  while (
-      (MBBI != MBB.end()) && MBBI->getFlag(MachineInstr::FrameSetup) &&
-      (MBBI->getOpcode() == ICMC::PUSH)) {
+  while ((MBBI != MBB.end()) && MBBI->getFlag(MachineInstr::FrameSetup) &&
+         (MBBI->getOpcode() == ICMC::PUSH)) {
     ++MBBI;
   }
 
   BuildMI(MBB, MBBI, DL, TII.get(ICMC::INCFS))
-      .addImm(FrameSize/2)
+      .addImm(FrameSize /
+              2) // divide by two because we work with 16 bit memory operands
       .addReg(ICMC::R4)
       .addReg(ICMC::R5)
       .setMIFlag(MachineInstr::FrameSetup);
@@ -45,7 +45,7 @@ void ICMCFrameLowering::emitEpilogue(MachineFunction &MF,
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned FrameSize = MFI.getStackSize() - FI->getCalleeSavedFrameSize();
 
-  if(!hasFP(MF)){
+  if (!hasFP(MF)) {
     return;
   }
 
@@ -60,11 +60,10 @@ void ICMCFrameLowering::emitEpilogue(MachineFunction &MF,
     --MBBI;
   }
 
-
   BuildMI(MBB, MBBI, DL, TII.get(ICMC::DECFS))
-    .addImm(FrameSize/2)
-    .addReg(ICMC::R4)
-    .addReg(ICMC::R5);
+      .addImm(FrameSize / 2) // same reasoning as in INCFS
+      .addReg(ICMC::R4)
+      .addReg(ICMC::R5);
 }
 
 void ICMCFrameLowering::determineCalleeSaves(MachineFunction &MF,
@@ -73,24 +72,27 @@ void ICMCFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   ICMCMachineFunctionInfo *FI = MF.getInfo<ICMCMachineFunctionInfo>();
 
+  // use the definition in ICMCCallingConv.td
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
-  if(FI->hasFrameIndex()){
+  // and, if we use a frame, we use R4 and R5 for INC/DECFS, so save them as
+  // well
+  if (FI->hasFrameIndex()) {
     SavedRegs.set(ICMC::R4);
     SavedRegs.set(ICMC::R5);
   }
 }
 
-
 bool ICMCFrameLowering::hasFP(const MachineFunction &MF) const {
-  const ICMCMachineFunctionInfo
-  *FuncInfo = MF.getInfo<ICMCMachineFunctionInfo>();
+  const ICMCMachineFunctionInfo *FuncInfo =
+      MF.getInfo<ICMCMachineFunctionInfo>();
 
+  // use the helper generated in the FrameAnalyzerPass
   return FuncInfo->hasFrameIndex();
 }
 
-namespace llvm{
-bool operator==(const CalleeSavedInfo A, const CalleeSavedInfo B){
+namespace llvm {
+bool operator==(const CalleeSavedInfo A, const CalleeSavedInfo B) {
   return A.getReg() == B.getReg();
 }
 
@@ -136,8 +138,7 @@ bool ICMCFrameLowering::spillCalleeSavedRegisters(
 
 bool ICMCFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-    MutableArrayRef<CalleeSavedInfo> CSI,
-    const TargetRegisterInfo *TRI) const {
+    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   if (CSI.empty()) {
     return false;
   }
@@ -161,6 +162,10 @@ bool ICMCFrameLowering::restoreCalleeSavedRegisters(
 
 namespace llvm {
 
+/*
+ * ICMCFrameAnalyzer: determine if functions have frame indexes and therefore
+ * should use INC/DECFS, for instance.
+ */
 struct ICMCFrameAnalyzer : public MachineFunctionPass {
   static char ID;
   ICMCFrameAnalyzer() : MachineFunctionPass(ID) {}
@@ -189,4 +194,3 @@ char ICMCFrameAnalyzer::ID = 0;
 FunctionPass *createICMCFrameAnalyzerPass() { return new ICMCFrameAnalyzer(); }
 
 } // end namespace llvm
-
