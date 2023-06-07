@@ -5,12 +5,16 @@
 
 namespace llvm {
 
+/*
+ * ICMCMachineFunctionInfo: defines extra information each function should have.
+ * Used in the FrameAnalyzerPass to determine if a function should have a frame
+ * index, for an optimization regarding frame sizes.
+ */
 class ICMCMachineFunctionInfo : public MachineFunctionInfo {
   unsigned CalleeSavedFrameSize = 0;
   bool HasFrameIndex = false;
-  
-public:
 
+public:
   explicit ICMCMachineFunctionInfo(MachineFunction &MF) {}
 
   MachineFunctionInfo *
@@ -22,8 +26,8 @@ public:
 
   unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
   void setCalleeSavedFrameSize(unsigned Bytes) { CalleeSavedFrameSize = Bytes; }
-  void setHasFrameIndex() {HasFrameIndex = true;}
-  bool hasFrameIndex() const {return HasFrameIndex;}
+  void setHasFrameIndex() { HasFrameIndex = true; }
+  bool hasFrameIndex() const { return HasFrameIndex; }
 };
 
 } // end namespace llvm

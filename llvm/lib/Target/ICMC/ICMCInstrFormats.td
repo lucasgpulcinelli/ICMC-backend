@@ -9,7 +9,7 @@ def memuimm16 : Operand<iPTR>, ImmLeaf<iPTR, [{return isInt<16>(Imm);}]> {
 
 def jbb_16 : Operand<OtherVT>;
 
-def spmem : ComplexPattern<i16, 1, "SelectSPmem", [frameindex]>;
+def spmem : ComplexPattern<i16, 1, "selectSPmem", [frameindex]>;
 
 // return statement flag 
 def ICMCretflag : SDNode<"ICMCISD::RET_FLAG", SDTNone,

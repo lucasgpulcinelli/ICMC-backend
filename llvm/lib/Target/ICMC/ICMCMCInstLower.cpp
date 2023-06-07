@@ -23,7 +23,7 @@ void ICMCMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   for (MachineOperand const &MO : MI->operands()) {
     MCOperand MCOp;
 
-    switch(MO.getType()){
+    switch (MO.getType()) {
     default:
       llvm_unreachable("unknown operand type");
     case MachineOperand::MO_Register:
@@ -50,4 +50,3 @@ void ICMCMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.addOperand(MCOp);
   }
 }
-
