@@ -1,6 +1,6 @@
 #include "ICMCISelLowering.h"
-#include "ICMCSubtarget.h"
 #include "ICMCRegisterInfo.h"
+#include "ICMCSubtarget.h"
 
 #include "llvm/CodeGen/CallingConvLower.h"
 
@@ -8,11 +8,13 @@ using namespace llvm;
 
 #include "ICMCGenCallingConv.inc"
 
+// GPRRegList is the list of registers that can hold arguments during fucntion
+// calls.
 static const MCPhysReg GPRRegList[] = {ICMC::R0, ICMC::R1, ICMC::R2, ICMC::R3};
 
 ICMCTargetLowering::ICMCTargetLowering(const TargetMachine &TM,
                                        const ICMCSubtarget &Subtarget)
-      : TargetLowering(TM), Subtarget(Subtarget) {
+    : TargetLowering(TM), Subtarget(Subtarget) {
 
   addRegisterClass(MVT::i16, &ICMC::GPRRegClass);
 
@@ -46,36 +48,37 @@ const char *ICMCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
   default:
     return nullptr;
-  NODE(RET_FLAG);
-  NODE(CALL);
-  NODE(CALLSEQ_END);
-  NODE(CMP);
-  NODE(SELECT_CC);
-  NODE(BRCOND);
-  NODE(WRAPPER);
+    NODE(RET_FLAG);
+    NODE(CALL);
+    NODE(CALLSEQ_END);
+    NODE(CMP);
+    NODE(SELECT_CC);
+    NODE(BRCOND);
+    NODE(WRAPPER);
 #undef NODE
   }
 }
 
-template<typename T>
-void ICMCTargetLowering::analyzeArguments(
-    const Function *F, const DataLayout *TD,
-    const SmallVectorImpl<T> &Args,
-    SmallVectorImpl<CCValAssign> &ArgLocs, CCState &CCInfo){
+template <typename T>
+void ICMCTargetLowering::analyzeArguments(const Function *F,
+                                          const DataLayout *TD,
+                                          const SmallVectorImpl<T> &Args,
+                                          SmallVectorImpl<CCValAssign> &ArgLocs,
+                                          CCState &CCInfo) {
   ArrayRef<MCPhysReg> RegList = makeArrayRef(GPRRegList);
 
   bool UseStack = false;
   int RegLastIdx = -1;
-  for (unsigned i = 0; i != Args.size();) {
-    MVT VT = Args[i].VT;
+  for (unsigned I = 0; I != Args.size();) {
+    MVT VT = Args[I].VT;
 
-    unsigned ArgIndex = Args[i].OrigArgIndex;
+    unsigned ArgIndex = Args[I].OrigArgIndex;
     unsigned TotalBytes = VT.getStoreSize();
-    unsigned j = i + 1;
-    for (; j != Args.size(); ++j) {
-      if (Args[j].OrigArgIndex != ArgIndex)
+    unsigned J = I + 1;
+    for (; J != Args.size(); ++J) {
+      if (Args[J].OrigArgIndex != ArgIndex)
         break;
-      TotalBytes += Args[j].VT.getStoreSize();
+      TotalBytes += Args[J].VT.getStoreSize();
     }
     // Round up to even number of bytes.
     TotalBytes = alignTo(TotalBytes, 2);
@@ -83,34 +86,33 @@ void ICMCTargetLowering::analyzeArguments(
     if (TotalBytes == 0)
       continue;
 
-    unsigned RegIdx = RegLastIdx + TotalBytes/2;
+    unsigned RegIdx = RegLastIdx + TotalBytes / 2;
     RegLastIdx = RegIdx;
 
     if (RegIdx >= RegList.size()) {
       UseStack = true;
     }
-    for (; i != j; ++i) {
-      MVT VT = Args[i].VT;
+    for (; I != J; ++I) {
+      MVT VT = Args[I].VT;
 
       unsigned Reg;
 
-      if(UseStack){
-        auto* Evt = EVT(VT).getTypeForEVT(CCInfo.getContext());
+      if (UseStack) {
+        auto *Evt = EVT(VT).getTypeForEVT(CCInfo.getContext());
         unsigned Offset = CCInfo.AllocateStack(TD->getTypeAllocSize(Evt),
                                                TD->getABITypeAlign(Evt));
         CCInfo.addLoc(
-            CCValAssign::getMem(i, VT, Offset, VT, CCValAssign::Full));
+            CCValAssign::getMem(I, VT, Offset, VT, CCValAssign::Full));
         continue;
       }
 
       if (VT == MVT::i16) {
         Reg = CCInfo.AllocateReg(RegList[RegIdx]);
       } else {
-        llvm_unreachable(
-            "calling convention can only manage i16 types");
+        llvm_unreachable("calling convention can only manage i16 types");
       }
       assert(Reg && "register not available in calling convention");
-      CCInfo.addLoc(CCValAssign::getReg(i, VT, Reg, VT, CCValAssign::Full));
+      CCInfo.addLoc(CCValAssign::getReg(I, VT, Reg, VT, CCValAssign::Full));
       RegIdx -= VT.getStoreSize();
     }
   }
@@ -118,8 +120,8 @@ void ICMCTargetLowering::analyzeArguments(
 
 SDValue ICMCTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::InputArg> & Ins, const SDLoc & DL,
-    SelectionDAG & DAG, SmallVectorImpl<SDValue> & InVals) const {
+    const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
+    SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -127,7 +129,7 @@ SDValue ICMCTargetLowering::LowerFormalArguments(
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
-      *DAG.getContext());
+                 *DAG.getContext());
 
   analyzeArguments(&MF.getFunction(), &DAG.getDataLayout(), Ins, ArgLocs,
                    CCInfo);
@@ -140,11 +142,11 @@ SDValue ICMCTargetLowering::LowerFormalArguments(
       Register Reg = MF.addLiveIn(VA.getLocReg(), RC);
       ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
 
-      switch(VA.getLocInfo()){
-        default:
-          llvm_unreachable("most LocInfos not implemented");
-        case CCValAssign::Full:
-          break;
+      switch (VA.getLocInfo()) {
+      default:
+        llvm_unreachable("most LocInfos not implemented");
+      case CCValAssign::Full:
+        break;
       }
 
       InVals.push_back(ArgValue);
@@ -168,11 +170,12 @@ SDValue ICMCTargetLowering::LowerFormalArguments(
   return Chain;
 }
 
-SDValue ICMCTargetLowering::LowerReturn(SDValue Chain,
-    CallingConv::ID CallConv, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> & Outs,
-    const SmallVectorImpl<SDValue> & OutVals,
-    const SDLoc & DL, SelectionDAG & DAG) const {
+SDValue
+ICMCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
+                                bool IsVarArg,
+                                const SmallVectorImpl<ISD::OutputArg> &Outs,
+                                const SmallVectorImpl<SDValue> &OutVals,
+                                const SDLoc &DL, SelectionDAG &DAG) const {
 
   SmallVector<CCValAssign, 16> RVLocs;
   MachineFunction &MF = DAG.getMachineFunction();
@@ -184,11 +187,11 @@ SDValue ICMCTargetLowering::LowerReturn(SDValue Chain,
   SDValue Flag;
   SmallVector<SDValue, 4> RetOps(1, Chain);
 
-  for (unsigned i = 0; i != RVLocs.size(); i++) {
-    CCValAssign &VA = RVLocs[i];
+  for (unsigned I = 0; I != RVLocs.size(); I++) {
+    CCValAssign &VA = RVLocs[I];
     assert(VA.isRegLoc() && "Can only return in registers!");
 
-    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVals[i], Flag);
+    Chain = DAG.getCopyToReg(Chain, DL, VA.getLocReg(), OutVals[I], Flag);
 
     Flag = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
@@ -204,7 +207,7 @@ SDValue ICMCTargetLowering::LowerReturn(SDValue Chain,
 }
 
 SDValue ICMCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
-    SmallVectorImpl<SDValue> &InVals) const {
+                                      SmallVectorImpl<SDValue> &InVals) const {
   SelectionDAG &DAG = CLI.DAG;
   SDLoc &DL = CLI.DL;
   SmallVectorImpl<ISD::OutputArg> &Outs = CLI.Outs;
@@ -213,12 +216,11 @@ SDValue ICMCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SDValue Chain = CLI.Chain;
   SDValue Callee = CLI.Callee;
   CallingConv::ID CallConv = CLI.CallConv;
-  bool IsVarArg = false; //no support for var args
+  bool IsVarArg = false; // no support for var args
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
-
 
   const Function *F = nullptr;
   if (const GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
@@ -278,18 +280,7 @@ SDValue ICMCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SmallVector<SDValue, 8> MemOpChains;
   if (HasStackArgs) {
-    MachineFunction &MF = DAG.getMachineFunction();
-
-    for (; AI != AE; AI++) {
-      CCValAssign &VA = ArgLocs[AI];
-      SDValue Arg = OutVals[AI];
-
-      assert(VA.isMemLoc());
-
-      MemOpChains.push_back(
-          DAG.getStore(Chain, DL, Arg, DAG.getRegister(ICMC::SP, getPointerTy(DAG.getDataLayout())),
-                       MachinePointerInfo::getStack(MF, VA.getLocMemOffset())));
-    }
+    llvm_unreachable("stack arguments in function calls not implemented");
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain and
@@ -327,7 +318,7 @@ SDValue ICMCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Chain = DAG.getNode(ICMCISD::CALL, DL, NodeTys, Ops);
   InFlag = Chain.getValue(1);
 
-  if(ArgLocs.size() > 4){
+  if (ArgLocs.size() > 4) {
     if (!MemOpChains.empty()) {
       Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
     }
@@ -341,13 +332,10 @@ SDValue ICMCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     }
   }
 
-
   // Handle result values, copying them out of physregs into vregs that we
   // return.
-  return lowerCallResult(Chain, InFlag, CallConv, false, Ins, DL, DAG,
-                         InVals);
+  return lowerCallResult(Chain, InFlag, CallConv, false, Ins, DL, DAG, InVals);
 }
-
 
 SDValue ICMCTargetLowering::lowerCallResult(
     SDValue Chain, SDValue InFlag, CallingConv::ID CallConv, bool IsVarArg,
@@ -374,17 +362,17 @@ SDValue ICMCTargetLowering::lowerCallResult(
 }
 
 std::pair<unsigned, const TargetRegisterClass *>
-ICMCTargetLowering::getRegForInlineAsmConstraint(
-    const TargetRegisterInfo *TRI, StringRef Constraint, MVT VT) const {
+ICMCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                                                 StringRef Constraint,
+                                                 MVT VT) const {
 
-  if(Constraint.size() == 1 && Constraint[0] == 'r'){
+  if (Constraint.size() == 1 && Constraint[0] == 'r') {
     return std::make_pair(0U, &ICMC::GPRRegClass);
   }
 
   return TargetLowering::getRegForInlineAsmConstraint(
       Subtarget.getRegisterInfo(), Constraint, VT);
 }
-
 
 ICMCTargetLowering::ConstraintType
 ICMCTargetLowering::getConstraintType(StringRef Constraint) const {
@@ -402,10 +390,10 @@ ICMCTargetLowering::getConstraintType(StringRef Constraint) const {
   return TargetLowering::getConstraintType(Constraint);
 }
 
-
-void ICMCTargetLowering::LowerAsmOperandForConstraint(
-    SDValue Op, std::string &Constraint, std::vector<SDValue> &Ops,
-    SelectionDAG &DAG) const {
+void ICMCTargetLowering::LowerAsmOperandForConstraint(SDValue Op,
+                                                      std::string &Constraint,
+                                                      std::vector<SDValue> &Ops,
+                                                      SelectionDAG &DAG) const {
 
   SDValue Result;
   SDLoc DL(Op);
@@ -418,7 +406,7 @@ void ICMCTargetLowering::LowerAsmOperandForConstraint(
 
   uint64_t CUVal64 = C->getZExtValue();
 
-  if(Constraint[0] == 'i') {
+  if (Constraint[0] == 'i') {
     if (!isUInt<16>(CUVal64)) {
       return;
     }
@@ -439,19 +427,22 @@ SDValue ICMCTargetLowering::LowerOperation(SDValue Op,
                                            SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   case ISD::SETCC:
-    return LowerSETCC(Op, DAG);
+    return lowerSETCC(Op, DAG);
   case ISD::SELECT_CC:
-    return LowerSELECT_CC(Op, DAG);
+    return lowerSELECTCC(Op, DAG);
   case ISD::BR_CC:
-    return LowerBR_CC(Op, DAG);
+    return lowerBRCC(Op, DAG);
   case ISD::GlobalAddress:
-    return LowerGlobalAddress(Op, DAG);
+    return lowerGlobalAddress(Op, DAG);
   default:
     llvm_unreachable("LowerOperation not implemented for this opcode!");
   }
 }
 
-static ICMCCC::CondCodes intCCToICMCCC(ISD::CondCode CC) {
+namespace {
+// intCCToICMCCC gets the target specific condition code for use with BR_CC,
+// SETCC and the likes.
+ICMCCC::CondCodes intCCToICMCCC(ISD::CondCode CC) {
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
@@ -473,6 +464,7 @@ static ICMCCC::CondCodes intCCToICMCCC(ISD::CondCode CC) {
     return ICMCCC::COND_LE;
   }
 }
+} // end anonymous namespace
 
 SDValue ICMCTargetLowering::getICMCCmp(SDValue LHS, SDValue RHS,
                                        ISD::CondCode CC, SDValue &ICMCcc,
@@ -483,7 +475,7 @@ SDValue ICMCTargetLowering::getICMCCmp(SDValue LHS, SDValue RHS,
   return Cmp;
 }
 
-SDValue ICMCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
+SDValue ICMCTargetLowering::lowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
@@ -500,48 +492,47 @@ SDValue ICMCTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ICMCISD::SELECT_CC, DL, VTs, Ops);
 }
 
-SDValue ICMCTargetLowering::LowerSELECT_CC(SDValue Op,
-                                           SelectionDAG &DAG) const {
+SDValue ICMCTargetLowering::lowerSELECTCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   SDValue TrueV = Op.getOperand(2);
   SDValue FalseV = Op.getOperand(3);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
-  SDLoc dl(Op);
+  SDLoc Dl(Op);
 
   SDValue TargetCC;
-  SDValue Cmp = getICMCCmp(LHS, RHS, CC, TargetCC, DAG, dl);
+  SDValue Cmp = getICMCCmp(LHS, RHS, CC, TargetCC, DAG, Dl);
 
   SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::Glue);
   SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
 
-  return DAG.getNode(ICMCISD::SELECT_CC, dl, VTs, Ops);
+  return DAG.getNode(ICMCISD::SELECT_CC, Dl, VTs, Ops);
 }
 
-SDValue ICMCTargetLowering::LowerBR_CC(SDValue Op,
-                                       SelectionDAG &DAG) const {
+SDValue ICMCTargetLowering::lowerBRCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
-  SDLoc dl(Op);
+  SDLoc Dl(Op);
 
   SDValue TargetCC;
-  SDValue Cmp = getICMCCmp(LHS, RHS, CC, TargetCC, DAG, dl);
+  SDValue Cmp = getICMCCmp(LHS, RHS, CC, TargetCC, DAG, Dl);
 
-  return DAG.getNode(ICMCISD::BRCOND, dl, MVT::Other, Chain, Dest, TargetCC,
+  return DAG.getNode(ICMCISD::BRCOND, Dl, MVT::Other, Chain, Dest, TargetCC,
                      Cmp);
 }
 
-MachineBasicBlock *ICMCTargetLowering::EmitInstrWithCustomInserter(
-      MachineInstr &MI, MachineBasicBlock *MBB) const {
+MachineBasicBlock *
+ICMCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
+                                                MachineBasicBlock *MBB) const {
 
   const ICMCInstrInfo &TII = (const ICMCInstrInfo &)*MI.getParent()
-                                ->getParent()
-                                ->getSubtarget()
-                                .getInstrInfo();
-  DebugLoc dl = MI.getDebugLoc();
+                                 ->getParent()
+                                 ->getSubtarget()
+                                 .getInstrInfo();
+  DebugLoc Dl = MI.getDebugLoc();
 
   // To "insert" a SELECT instruction, we insert the diamond
   // control-flow pattern. The incoming instruction knows the
@@ -550,57 +541,57 @@ MachineBasicBlock *ICMCTargetLowering::EmitInstrWithCustomInserter(
   // to use.
 
   MachineFunction *MF = MBB->getParent();
-  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  const BasicBlock *LLVMBB = MBB->getBasicBlock();
   MachineBasicBlock *FallThrough = MBB->getFallThrough();
 
   // If the current basic block falls through to another basic block,
   // we must insert an unconditional branch to the fallthrough destination
   // if we are to insert basic blocks at the prior fallthrough point.
   if (FallThrough != nullptr) {
-    BuildMI(MBB, dl, TII.get(ICMC::JMP)).addMBB(FallThrough);
+    BuildMI(MBB, Dl, TII.get(ICMC::JMP)).addMBB(FallThrough);
   }
 
-  MachineBasicBlock *trueMBB = MF->CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *falseMBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *TrueMBB = MF->CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *FalseMBB = MF->CreateMachineBasicBlock(LLVMBB);
 
   MachineFunction::iterator I;
   for (I = MF->begin(); I != MF->end() && &(*I) != MBB; ++I)
     ;
   if (I != MF->end())
     ++I;
-  MF->insert(I, trueMBB);
-  MF->insert(I, falseMBB);
+  MF->insert(I, TrueMBB);
+  MF->insert(I, FalseMBB);
 
   // Transfer remaining instructions and all successors of the current
   // block to the block which will contain the Phi node for the
   // select.
-  trueMBB->splice(trueMBB->begin(), MBB,
+  TrueMBB->splice(TrueMBB->begin(), MBB,
                   std::next(MachineBasicBlock::iterator(MI)), MBB->end());
-  trueMBB->transferSuccessorsAndUpdatePHIs(MBB);
+  TrueMBB->transferSuccessorsAndUpdatePHIs(MBB);
 
   ICMCCC::CondCodes CC = (ICMCCC::CondCodes)MI.getOperand(3).getImm();
-  BuildMI(MBB, dl, TII.getBrCond(CC)).addMBB(trueMBB);
-  BuildMI(MBB, dl, TII.get(ICMC::JMP)).addMBB(falseMBB);
-  MBB->addSuccessor(falseMBB);
-  MBB->addSuccessor(trueMBB);
+  BuildMI(MBB, Dl, TII.getBrCond(CC)).addMBB(TrueMBB);
+  BuildMI(MBB, Dl, TII.get(ICMC::JMP)).addMBB(FalseMBB);
+  MBB->addSuccessor(FalseMBB);
+  MBB->addSuccessor(TrueMBB);
 
   // Unconditionally flow back to the true block
-  BuildMI(falseMBB, dl, TII.get(ICMC::JMP)).addMBB(trueMBB);
-  falseMBB->addSuccessor(trueMBB);
+  BuildMI(FalseMBB, Dl, TII.get(ICMC::JMP)).addMBB(TrueMBB);
+  FalseMBB->addSuccessor(TrueMBB);
 
   // Set up the Phi node to determine where we came from
-  BuildMI(*trueMBB, trueMBB->begin(), dl, TII.get(ICMC::PHI),
+  BuildMI(*TrueMBB, TrueMBB->begin(), Dl, TII.get(ICMC::PHI),
           MI.getOperand(0).getReg())
       .addReg(MI.getOperand(1).getReg())
       .addMBB(MBB)
       .addReg(MI.getOperand(2).getReg())
-      .addMBB(falseMBB);
+      .addMBB(FalseMBB);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
-  return trueMBB;
+  return TrueMBB;
 }
 
-SDValue ICMCTargetLowering::LowerGlobalAddress(SDValue Op,
+SDValue ICMCTargetLowering::lowerGlobalAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
   auto DL = DAG.getDataLayout();
 

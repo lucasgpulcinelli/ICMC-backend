@@ -1,5 +1,5 @@
-#include "ICMCMachineFunctionInfo.h"
 #include "ICMCRegisterInfo.h"
+#include "ICMCMachineFunctionInfo.h"
 #include "ICMCTargetMachine.h"
 
 #include "llvm/ADT/BitVector.h"
@@ -23,9 +23,8 @@ using namespace llvm;
 ICMCRegisterInfo::ICMCRegisterInfo(const ICMCSubtarget &ST)
     : ICMCGenRegisterInfo(ICMC::R0) {}
 
-
-const MCPhysReg *ICMCRegisterInfo::getCalleeSavedRegs(
-      const MachineFunction *MF) const {
+const MCPhysReg *
+ICMCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   return CSR_Normal_SaveList;
 }
@@ -38,10 +37,9 @@ BitVector ICMCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-
-void ICMCRegisterInfo::eliminateFrameIndex(
-      MachineBasicBlock::iterator II, int SPAdj, unsigned FIOperandNum,
-      RegScavenger *RS) const {
+void ICMCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+                                           int SPAdj, unsigned FIOperandNum,
+                                           RegScavenger *RS) const {
 
   MachineInstr &MI = *II;
   MachineBasicBlock &MBB = *MI.getParent();
@@ -56,15 +54,15 @@ void ICMCRegisterInfo::eliminateFrameIndex(
 
   Offset += MFI.getStackSize() - TFI->getOffsetOfLocalArea() + 2;
 
-  MI.getOperand(FIOperandNum).ChangeToImmediate(Offset/2);
+  MI.getOperand(FIOperandNum).ChangeToImmediate(Offset / 2);
 }
 
-const uint32_t *ICMCRegisterInfo::getCallPreservedMask(
-      const MachineFunction &MF, CallingConv::ID CC) const {
+const uint32_t *
+ICMCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
+                                       CallingConv::ID CC) const {
   return CSR_Normal_RegMask;
 }
 
 Register ICMCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-    llvm_unreachable("getFrameRegister not implemented");
+  llvm_unreachable("getFrameRegister not implemented");
 }
-

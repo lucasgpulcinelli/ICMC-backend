@@ -19,12 +19,17 @@ ICMCInstrInfo::ICMCInstrInfo(const ICMCSubtarget &ST)
     : ICMCGenInstrInfo(), RI(ST) {}
 
 void ICMCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
-    MachineBasicBlock::iterator MI, const DebugLoc &DL, MCRegister DestReg,
-    MCRegister SrcReg, bool KillSrc) const {
+                                MachineBasicBlock::iterator MI,
+                                const DebugLoc &DL, MCRegister DestReg,
+                                MCRegister SrcReg, bool KillSrc) const {
 
-  if(ICMC::GPRRegClass.contains(DestReg, SrcReg)) {
+  // moves are different instructions when using normal registers and when using
+  // SP. (well kinda, most of the instruction is the same, but as defined in the
+  // tablegen they are different)
+
+  if (ICMC::GPRRegClass.contains(DestReg, SrcReg)) {
     BuildMI(MBB, MI, DL, get(ICMC::MOV), DestReg)
-      .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
   if (SrcReg == ICMC::SP && ICMC::GPRRegClass.contains(DestReg)) {
@@ -33,7 +38,7 @@ void ICMCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
   if (DestReg == ICMC::SP && ICMC::GPRRegClass.contains(SrcReg)) {
     BuildMI(MBB, MI, DL, get(ICMC::MOVSetSP))
-      .addReg(SrcReg, getKillRegState(KillSrc));
+        .addReg(SrcReg, getKillRegState(KillSrc));
     return;
   }
 
@@ -45,6 +50,11 @@ void ICMCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                          Register DestReg, int FrameIndex,
                                          const TargetRegisterClass *RC,
                                          const TargetRegisterInfo *TRI) const {
+  // the loading and storing to and from the stack is an essential operation
+  // that is VERY expensive using the current instruction definitions. This is a
+  // serious problem that cannot be solved without changing something in the
+  // internals of the architecture.
+
   DebugLoc DL;
   if (MI != MBB.end()) {
     DL = MI->getDebugLoc();
@@ -56,21 +66,16 @@ void ICMCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
 
   Register Tmp2 = scavengeGPR(TRI, MI);
 
-  BuildMI(MBB, MI, DL, get(ICMC::LOADN), Tmp2)
-    .addImm(FrameIndex);
+  BuildMI(MBB, MI, DL, get(ICMC::LOADN), Tmp2).addImm(FrameIndex);
 
-  BuildMI(MBB, MI, DL, get(ICMC::ADD), Tmp2)
-    .addReg(Tmp2)
-    .addReg(Tmp1);
+  BuildMI(MBB, MI, DL, get(ICMC::ADD), Tmp2).addReg(Tmp2).addReg(Tmp1);
 
-  BuildMI(MBB, MI, DL, get(ICMC::LOADI), DestReg)
-    .addReg(Tmp2);
+  BuildMI(MBB, MI, DL, get(ICMC::LOADI), DestReg).addReg(Tmp2);
 }
-
 
 void ICMCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
-                                        Register SrcReg, bool isKill,
+                                        Register SrcReg, bool IsKill,
                                         int FrameIndex,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI) const {
@@ -90,21 +95,15 @@ void ICMCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
 
   Register Tmp2 = scavengeGPR(TRI, MI);
 
-  BuildMI(MBB, MI, DL, get(ICMC::LOADN), Tmp2)
-    .addImm(FrameIndex);
+  BuildMI(MBB, MI, DL, get(ICMC::LOADN), Tmp2).addImm(FrameIndex);
 
-  BuildMI(MBB, MI, DL, get(ICMC::ADD), Tmp2)
-    .addReg(Tmp2)
-    .addReg(Tmp1);
+  BuildMI(MBB, MI, DL, get(ICMC::ADD), Tmp2).addReg(Tmp2).addReg(Tmp1);
 
-  BuildMI(MBB, MI, DL, get(ICMC::STOREI))
-    .addReg(Tmp2)
-    .addReg(SrcReg);
+  BuildMI(MBB, MI, DL, get(ICMC::STOREI)).addReg(Tmp2).addReg(SrcReg);
 }
 
-
-Register llvm::scavengeGPR(const TargetRegisterInfo* TRI,
-    MachineBasicBlock::iterator &MI) {
+Register llvm::scavengeGPR(const TargetRegisterInfo *TRI,
+                           MachineBasicBlock::iterator &MI) {
   MachineBasicBlock *MBB = MI->getParent();
   RegScavenger RS;
 
@@ -130,6 +129,7 @@ Register llvm::scavengeGPR(const TargetRegisterInfo* TRI,
 }
 
 const MCInstrDesc &ICMCInstrInfo::getBrCond(ICMCCC::CondCodes CC) const {
+  // note, as said in other comments, that many JMPs are not in here.
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
